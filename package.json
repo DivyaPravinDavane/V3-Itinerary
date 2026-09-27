@@ -15,7 +15,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@rolldown/binding-darwin-x64": "^1.2.9",
     "canvas-confetti": "^1.9.4",
     "cors": "^2.8.6",
     "dotenv": "^18.0.1",
