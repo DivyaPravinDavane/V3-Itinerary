@@ -670,8 +670,8 @@ const distPath = fs.existsSync(path.join(__dirname, '../dist'))
 
 if (distPath) {
   app.use(express.static(distPath));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
     res.sendFile(path.join(distPath, 'index.html'));
