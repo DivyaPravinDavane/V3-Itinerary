@@ -27,6 +27,7 @@ interface PopularDestinationsProps {
   onBuyItinerary: (itinerary: Itinerary) => void;
   onViewAll: () => void;
   onBackToPopular: () => void;
+  onNavigateToDestinationsPage?: () => void;
 }
 
 export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
@@ -42,7 +43,8 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
   onSelectItinerary,
   onBuyItinerary,
   onViewAll,
-  onBackToPopular
+  onBackToPopular,
+  onNavigateToDestinationsPage
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -132,10 +134,23 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                 <span>Back to Popular</span>
               </button>
             ) : (
-              <button className="view-all-link" onClick={onViewAll}>
-                <span>View All ({destinations.length}+)</span>
-                <ArrowRight size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                {onNavigateToDestinationsPage && (
+                  <button 
+                    className="view-all-link"
+                    style={{ background: '#EFF6FF', color: '#1D4ED8', borderColor: '#BFDBFE' }}
+                    onClick={onNavigateToDestinationsPage}
+                    title="Open dedicated Destinations page"
+                  >
+                    <span>All Destinations ({destinationsMaster?.length || 17}+)</span>
+                    <ArrowRight size={15} />
+                  </button>
+                )}
+                <button className="view-all-link" onClick={onViewAll}>
+                  <span>View All Blueprints ({destinations.length}+)</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
             )}
           </div>
         </div>

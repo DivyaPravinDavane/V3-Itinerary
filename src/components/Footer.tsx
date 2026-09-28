@@ -5,19 +5,28 @@ interface FooterProps {
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
   onSelectDestination: (name: string) => void;
+  onNavigatePage?: (page: 'home' | 'destinations') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAgentModal,
   onScrollToSection,
-  onSelectDestination
+  onSelectDestination,
+  onNavigatePage
 }) => {
   return (
     <footer className="site-footer" id="footer">
       <div className="footer-top-container">
         {/* Col 1: Brand & Vision */}
         <div className="footer-col brand-col">
-          <div className="footer-logo-row" onClick={() => onScrollToSection('hero')} style={{ cursor: 'pointer' }}>
+          <div 
+            className="footer-logo-row" 
+            onClick={() => {
+              if (onNavigatePage) onNavigatePage('home');
+              else onScrollToSection('hero');
+            }} 
+            style={{ cursor: 'pointer' }}
+          >
             <img 
               src="/v3_logo.png" 
               alt="V3Itinerary.com" 
@@ -57,8 +66,22 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="footer-col">
           <h4 className="footer-col-title">Platform & Agents</h4>
           <ul className="footer-links-list">
-            <li><button onClick={() => onScrollToSection('hero')}>Marketplace Home</button></li>
-            <li><button onClick={() => onScrollToSection('destinations')}>Browse Curated Itineraries</button></li>
+            <li>
+              <button onClick={() => {
+                if (onNavigatePage) onNavigatePage('home');
+                else onScrollToSection('hero');
+              }}>
+                Marketplace Home
+              </button>
+            </li>
+            <li>
+              <button onClick={() => {
+                if (onNavigatePage) onNavigatePage('destinations');
+                else onScrollToSection('destinations');
+              }}>
+                Explore All Destinations
+              </button>
+            </li>
             <li><button onClick={onOpenAgentModal}>For Travel Agents (Join with GSTIN)</button></li>
             <li><button onClick={() => onScrollToSection('how-it-works')}>How It Works (4 Steps)</button></li>
             <li><button onClick={() => onScrollToSection('trust-pillars')}>Buyer Protection & Trust</button></li>

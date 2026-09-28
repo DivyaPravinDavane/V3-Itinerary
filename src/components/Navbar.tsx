@@ -4,23 +4,27 @@ import type { UserProfile } from '../types';
 
 interface NavbarProps {
   user: UserProfile;
+  currentPage?: 'home' | 'destinations';
   onOpenAuth: (mode?: 'login' | 'signup', role?: 'customer' | 'admin') => void;
   onLogout: () => void;
   onOpenDashboard: (tab: 'trips' | 'saved' | 'orders' | 'profile') => void;
   onOpenAdminDashboard: () => void;
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
+  onNavigatePage?: (page: 'home' | 'destinations') => void;
   isAgentPageOpen?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   user,
+  currentPage = 'home',
   onOpenAuth,
   onLogout,
   onOpenDashboard,
   onOpenAdminDashboard,
   onOpenAgentModal,
   onScrollToSection,
+  onNavigatePage,
   isAgentPageOpen
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -34,7 +38,15 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="header-inner">
         {/* Left/Center Group: Logo sitting directly next to Home button */}
         <div className="header-nav-group">
-          <div className="brand-logo" onClick={() => onScrollToSection('hero')} role="button" tabIndex={0}>
+          <div 
+            className="brand-logo" 
+            onClick={() => {
+              if (onNavigatePage) onNavigatePage('home');
+              else onScrollToSection('hero');
+            }} 
+            role="button" 
+            tabIndex={0}
+          >
             <img 
               src="/v3_logo.png" 
               alt="V3Itinerary.com - Verified • Value • Variety" 
@@ -43,8 +55,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <nav className="desktop-nav">
-            <button className="nav-item active" onClick={() => onScrollToSection('hero')}>
+            <button 
+              className={`nav-item ${currentPage === 'home' && !isAgentPageOpen ? 'active' : ''}`} 
+              onClick={() => {
+                if (onNavigatePage) onNavigatePage('home');
+                else onScrollToSection('hero');
+              }}
+            >
               Home
+            </button>
+
+            <button 
+              className={`nav-item ${currentPage === 'destinations' ? 'active' : ''}`} 
+              onClick={() => {
+                if (onNavigatePage) onNavigatePage('destinations');
+                else onScrollToSection('destinations');
+              }}
+            >
+              Destinations
             </button>
             
             <div className="nav-dropdown-wrapper">
@@ -61,16 +89,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="dropdown-menu shadow-lg"
                   onMouseLeave={() => setBrowseDropdownOpen(false)}
                 >
-                  <button className="dropdown-item" onClick={() => { onScrollToSection('destinations'); setBrowseDropdownOpen(false); }}>
-                    🌟 Popular Destinations (Top 6)
+                  <button className="dropdown-item" onClick={() => { 
+                    if (onNavigatePage) onNavigatePage('destinations');
+                    else onScrollToSection('destinations'); 
+                    setBrowseDropdownOpen(false); 
+                  }}>
+                    🌟 All Destinations & Blueprints
                   </button>
-                  <button className="dropdown-item" onClick={() => { onScrollToSection('destinations'); setBrowseDropdownOpen(false); }}>
+                  <button className="dropdown-item" onClick={() => { 
+                    if (onNavigatePage) onNavigatePage('destinations');
+                    else onScrollToSection('destinations'); 
+                    setBrowseDropdownOpen(false); 
+                  }}>
                     🏖️ Beach & Overwater Getaways
                   </button>
-                  <button className="dropdown-item" onClick={() => { onScrollToSection('destinations'); setBrowseDropdownOpen(false); }}>
+                  <button className="dropdown-item" onClick={() => { 
+                    if (onNavigatePage) onNavigatePage('destinations');
+                    else onScrollToSection('destinations'); 
+                    setBrowseDropdownOpen(false); 
+                  }}>
                     🏔️ Mountain & Alps Itineraries
                   </button>
-                  <button className="dropdown-item" onClick={() => { onScrollToSection('destinations'); setBrowseDropdownOpen(false); }}>
+                  <button className="dropdown-item" onClick={() => { 
+                    if (onNavigatePage) onNavigatePage('destinations');
+                    else onScrollToSection('destinations'); 
+                    setBrowseDropdownOpen(false); 
+                  }}>
                     🕌 Cultural & Heritage Blueprints
                   </button>
                 </div>
@@ -83,13 +127,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               For Travel Agents
             </button>
-            <button className="nav-item" onClick={() => onScrollToSection('how-it-works')}>
+            <button className="nav-item" onClick={() => {
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('how-it-works'), 60);
+              } else {
+                onScrollToSection('how-it-works');
+              }
+            }}>
               How It Works
             </button>
-            <button className="nav-item" onClick={() => onScrollToSection('trust-pillars')}>
+            <button className="nav-item" onClick={() => {
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('trust-pillars'), 60);
+              } else {
+                onScrollToSection('trust-pillars');
+              }
+            }}>
               About Us
             </button>
-            <button className="nav-item" onClick={() => onScrollToSection('footer')}>
+            <button className="nav-item" onClick={() => {
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('footer'), 60);
+              } else {
+                onScrollToSection('footer');
+              }
+            }}>
               Contact Us
             </button>
           </nav>
@@ -256,25 +321,73 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
-          <button className="mobile-nav-link" onClick={() => { onScrollToSection('hero'); setMobileMenuOpen(false); }}>
+          <button 
+            className={`mobile-nav-link ${currentPage === 'home' ? 'font-bold text-blue-600' : ''}`} 
+            onClick={() => { 
+              if (onNavigatePage) onNavigatePage('home');
+              else onScrollToSection('hero'); 
+              setMobileMenuOpen(false); 
+            }}
+          >
             Home
           </button>
-          <button className="mobile-nav-link" onClick={() => { onScrollToSection('destinations'); setMobileMenuOpen(false); }}>
+          <button 
+            className={`mobile-nav-link ${currentPage === 'destinations' ? 'font-bold text-blue-600' : ''}`} 
+            onClick={() => { 
+              if (onNavigatePage) onNavigatePage('destinations');
+              else onScrollToSection('destinations'); 
+              setMobileMenuOpen(false); 
+            }}
+          >
+            Destinations
+          </button>
+          <button 
+            className="mobile-nav-link" 
+            onClick={() => { 
+              if (onNavigatePage) onNavigatePage('destinations');
+              else onScrollToSection('destinations'); 
+              setMobileMenuOpen(false); 
+            }}
+          >
             Browse Itineraries
           </button>
           <button className="mobile-nav-link" onClick={() => { onOpenAgentModal(); setMobileMenuOpen(false); }}>
             For Travel Agents
           </button>
-          <button className="mobile-nav-link" onClick={() => { onScrollToSection('how-it-works'); setMobileMenuOpen(false); }}>
+          <button className="mobile-nav-link" onClick={() => { 
+            if (onNavigatePage && currentPage !== 'home') {
+              onNavigatePage('home');
+              setTimeout(() => onScrollToSection('how-it-works'), 60);
+            } else {
+              onScrollToSection('how-it-works');
+            }
+            setMobileMenuOpen(false); 
+          }}>
             How It Works
           </button>
-          <button className="mobile-nav-link" onClick={() => { onScrollToSection('trust-pillars'); setMobileMenuOpen(false); }}>
+          <button className="mobile-nav-link" onClick={() => { 
+            if (onNavigatePage && currentPage !== 'home') {
+              onNavigatePage('home');
+              setTimeout(() => onScrollToSection('trust-pillars'), 60);
+            } else {
+              onScrollToSection('trust-pillars');
+            }
+            setMobileMenuOpen(false); 
+          }}>
             About Us
           </button>
           <button className="mobile-nav-link" onClick={() => { onOpenDashboard('saved'); setMobileMenuOpen(false); }}>
             Saved Wishlist ({user.savedItineraryIds?.length || 0})
           </button>
-          <button className="mobile-nav-link" onClick={() => { onScrollToSection('footer'); setMobileMenuOpen(false); }}>
+          <button className="mobile-nav-link" onClick={() => { 
+            if (onNavigatePage && currentPage !== 'home') {
+              onNavigatePage('home');
+              setTimeout(() => onScrollToSection('footer'), 60);
+            } else {
+              onScrollToSection('footer');
+            }
+            setMobileMenuOpen(false); 
+          }}>
             Contact Us
           </button>
           

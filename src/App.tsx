@@ -13,6 +13,7 @@ import { TravelAgentOnboardingPage } from './components/TravelAgentOnboardingPag
 import { AuthModal } from './components/AuthModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { DestinationPackagesModal } from './components/DestinationPackagesModal';
+import { DestinationsPage } from './components/DestinationsPage';
 import { ItineraryDetailModal } from './components/ItineraryDetailModal';
 import { RazorpayRedirectGateway } from './components/RazorpayRedirectGateway';
 import { POPULAR_DESTINATIONS as FALLBACK_POPULAR_DESTINATIONS, ALL_ITINERARIES as FALLBACK_ALL_ITINERARIES } from './data/mockData';
@@ -239,6 +240,36 @@ export function App() {
   const [authRole, setAuthRole] = useState<'customer' | 'admin'>('customer');
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Dedicated Page Routing ('home' | 'destinations')
+  const [currentPage, setCurrentPage] = useState<'home' | 'destinations'>(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#destinations') {
+      return 'destinations';
+    }
+    return 'home';
+  });
+
+  // Synchronize browser history / URL hash navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#destinations') {
+        setCurrentPage('destinations');
+        setSelectedDestinationName(null);
+      } else if (hash === '#home' || hash === '') {
+        setCurrentPage('home');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleNavigatePage = (page: 'home' | 'destinations') => {
+    setCurrentPage(page);
+    setSelectedDestinationName(null);
+    window.location.hash = `#${page}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -548,6 +579,8 @@ export function App() {
       {/* Top Navigation Header */}
       <Navbar 
         user={user}
+        currentPage={currentPage}
+        onNavigatePage={handleNavigatePage}
         onOpenAuth={handleOpenAuth}
         onLogout={() => {
           localStorage.removeItem('v3_auth_active');
@@ -564,7 +597,7 @@ export function App() {
         isAgentPageOpen={agentModalOpen}
       />
 
-      {/* Main Page Body — replaced by gateway or destination packages page */}
+      {/* Main Page Body — replaced by gateway, destination packages page, or dedicated Destinations page */}
       {gatewayItinerary ? (
         <RazorpayRedirectGateway 
           itinerary={gatewayItinerary}
@@ -586,7 +619,11 @@ export function App() {
           allItineraries={allItineraries}
           savedIds={user.savedItineraryIds}
           isPurchased={isPurchased}
-          onClose={() => setSelectedDestinationName(null)}
+          backLabel={currentPage === 'destinations' ? '← Back to All Destinations' : '← Back to Home'}
+          onClose={() => {
+            setSelectedDestinationName(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           onSelectPackage={(itinerary) => {
             setSelectedItinerary(itinerary);
           }}
@@ -595,6 +632,34 @@ export function App() {
           }}
           onToggleSave={handleToggleSave}
         />
+      ) : currentPage === 'destinations' ? (
+        <>
+          <DestinationsPage 
+            destinationsMaster={destinationsMaster}
+            allItineraries={allItineraries}
+            savedIds={user.savedItineraryIds}
+            onSelectDestination={(destName) => {
+              setSelectedDestinationName(destName);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectItinerary={(itinerary) => {
+              setSelectedItinerary(itinerary);
+            }}
+            onToggleSave={handleToggleSave}
+            onBackToHome={() => handleNavigatePage('home')}
+          />
+
+          {/* Footer */}
+          <Footer 
+            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onScrollToSection={scrollToSection}
+            onSelectDestination={(name) => {
+              setSelectedDestinationName(name);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigatePage={handleNavigatePage}
+          />
+        </>
       ) : (
         <>
           <main>
@@ -627,6 +692,7 @@ export function App() {
               }}
               onViewAll={handleViewAll}
               onBackToPopular={handleBackToPopular}
+              onNavigateToDestinationsPage={() => handleNavigatePage('destinations')}
             />
 
             {/* 3. Middle Section: How It Works + Agent Promo + Stats */}
@@ -646,6 +712,7 @@ export function App() {
               setSelectedDestinationName(name);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onNavigatePage={handleNavigatePage}
           />
         </>
       )}

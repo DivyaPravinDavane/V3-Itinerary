@@ -14,6 +14,7 @@ interface DestinationPackagesModalProps {
   onSelectPackage: (itinerary: Itinerary) => void;
   onPayToView: (itinerary: Itinerary) => void;
   onToggleSave: (id: string, e: React.MouseEvent) => void;
+  backLabel?: string;
 }
 
 export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> = ({
@@ -23,7 +24,8 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
   isPurchased,
   onClose,
   onSelectPackage,
-  onToggleSave
+  onToggleSave,
+  backLabel
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDuration, setSelectedDuration] = useState<string>('all');
@@ -111,7 +113,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
               onClick={onClose}
               type="button"
             >
-              ← Back to Home
+              {backLabel || '← Back'}
             </button>
           </div>
         </div>
