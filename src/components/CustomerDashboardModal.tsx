@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Briefcase, Heart, FileText, User, Download, MessageCircle, Phone, Trash2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import type { UserProfile, Itinerary } from '../types';
 import { generateItineraryPDF } from '../utils/pdfGenerator';
+import { API_BASE_URL } from '../utils/api';
 
 interface CustomerDashboardModalProps {
   user: UserProfile;
@@ -46,7 +47,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
     e.preventDefault();
     onUpdatePreferences(travelType, budgetTier);
     try {
-      await fetch('http://localhost:5000/api/auth/login', {
+      await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +91,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
           <div className="dash-metrics-ribbon">
             <div className="metric-pill">
               <span className="pill-n">{user.purchasedOrders.length}</span>
-              <span className="pill-l">Purchased Blueprints</span>
+              <span className="pill-l">Purchased Itineraries</span>
             </div>
             <div className="metric-pill">
               <span className="pill-n">{user.savedItineraryIds.length}</span>
@@ -140,7 +141,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                 <div className="empty-state-box">
                   <Briefcase size={40} className="text-slate-300 mb-3" />
                   <h4>No Purchased Trips Yet</h4>
-                  <p>Browse our verified itineraries for Dubai, Maldives, Singapore and more starting at just ₹99 to unlock complete day-by-day blueprints.</p>
+                  <p>Browse our verified itineraries for Dubai, Maldives, Singapore and more starting at just ₹99 to unlock complete day-by-day itineraries.</p>
                 </div>
               ) : (
                 <div className="purchased-trips-list">
@@ -210,8 +211,8 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                   <div className="guest-cloud-left">
                     <span className="guest-cloud-icon">☁️</span>
                     <div>
-                      <h5 className="font-bold text-sm text-slate-800">Sync with MySQL Database & Cloud</h5>
-                      <p className="text-xs text-slate-600">You are currently in guest mode. Log in or create an account to permanently sync these saved items to phpMyAdmin database.</p>
+                      <h5 className="font-bold text-sm text-slate-800">Sync with Cloud & Save Wishlist</h5>
+                      <p className="text-xs text-slate-600">You are currently in guest mode. Log in or create an account to permanently sync these saved items across your devices.</p>
                     </div>
                   </div>
                   {onOpenAuth && (
@@ -262,7 +263,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                         </h4>
                         <div className="saved-card-footer">
                           <button className="btn-view-it" onClick={() => onSelectItinerary(it)}>
-                            View Blueprint
+                            View Itinerary
                           </button>
                           <button 
                             className="btn-delete-saved" 
@@ -306,7 +307,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                         <tr key={order.orderId}>
                           <td className="font-mono text-xs">{order.orderId}</td>
                           <td>{order.date}</td>
-                          <td>{order.destination} Blueprint</td>
+                          <td>{order.destination} Itinerary</td>
                           <td>₹99.00</td>
                           <td>₹0.00</td>
                           <td className="font-bold">₹99.00</td>
@@ -334,7 +335,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                   <div className="empty-state-box">
                     <FileText size={40} className="text-slate-300 mb-3" />
                     <h4>No Orders Found</h4>
-                    <p>Your unlocked travel blueprints and tax invoices will appear here.</p>
+                    <p>Your unlocked travel itineraries and tax invoices will appear here.</p>
                   </div>
                 ) : (
                   user.purchasedOrders.map((order) => {
@@ -351,7 +352,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
 
                         <div className="inv-card-body">
                           <h4 className="inv-item-title">{order.itineraryTitle}</h4>
-                          <div className="inv-dest-tag">{order.destination} Blueprint</div>
+                          <div className="inv-dest-tag">{order.destination} Itinerary</div>
 
                           <div className="inv-price-breakdown">
                             <div className="inv-price-item">

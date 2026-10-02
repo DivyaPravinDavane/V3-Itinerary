@@ -3,7 +3,7 @@ import {
   ArrowLeft, Clock, Users, Heart, Star,
   ShieldCheck, Download, CheckCircle2,
   Calendar, CreditCard, ChevronDown, ChevronUp, FileText,
-  MapPin, Phone, MessageCircle, Mail, DollarSign, Hotel, Sparkles, Share2
+  MapPin, Phone, MessageCircle, Mail, IndianRupee, Hotel, Sparkles, Share2
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
 import { generateItineraryPDF, createItineraryPDFBlobUrl } from '../utils/pdfGenerator';
@@ -309,7 +309,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
             {itinerary.budgetBreakdown && (
               <div className="itinerary-content-card shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
-                  <DollarSign size={18} className="text-emerald-600" />
+                  <IndianRupee size={18} className="text-emerald-600" />
                   <h3 className="text-lg font-bold text-slate-900">Estimated Trip Budget Breakdown</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">

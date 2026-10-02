@@ -17,6 +17,7 @@ import {
   saveAgent,
   getAgents,
   updateAgentStatus,
+  getAgentByEmailOrGst,
   toggleWishlist,
   getWishlist,
   getRecentActivities,
@@ -281,8 +282,18 @@ app.post('/api/orders/update-status', async (req, res) => {
 // ─── 6. Get Orders ────────────────────────────────────────────────────────────
 app.get('/api/orders', async (req, res) => {
   try {
-    const { email } = req.query;
-    const orders = await getOrders(email || null);
+    const { email, agentEmail, agentName } = req.query;
+    let orders = await getOrders(email || null);
+    if (agentEmail) {
+      orders = orders.filter(o => 
+        (o.agent_email && o.agent_email.toLowerCase().trim() === String(agentEmail).toLowerCase().trim())
+      );
+    }
+    if (agentName) {
+      orders = orders.filter(o => 
+        (o.agent_name && o.agent_name.toLowerCase().includes(String(agentName).toLowerCase().trim()))
+      );
+    }
     res.json({ success: true, count: orders.length, orders });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch orders', details: error.message });
@@ -317,29 +328,52 @@ app.post('/api/auth/login', async (req, res) => {
     const { 
       email, fullName, role = 'customer', mobile, whatsapp,
       password, passwordHash, securityPin, isNewRegistration,
-      preferredTravelType, preferredBudgetTier 
+      preferredTravelType, preferredBudgetTier,
+      agencyName, gstNumber
     } = req.body;
 
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!email && !gstNumber) return res.status(400).json({ error: 'Email or GST is required' });
+
+    let agentData = null;
+    if (role === 'agent') {
+      agentData = await getAgentByEmailOrGst(email || gstNumber || agencyName);
+    }
+
+    const effectiveEmail = (email || (agentData ? agentData.email : `${(agencyName || 'agent').toLowerCase().replace(/[^a-z0-9]/g, '')}@agency.v3itinerary.com`)).trim().toLowerCase();
+    const effectiveName = fullName || (agentData ? (agentData.agency_name || agentData.founder_name) : agencyName) || 'Travel Partner';
 
     const user = await upsertUser({
-      id: `usr_${Date.now()}`,
-      email,
-      fullName: fullName || 'Traveler',
-      mobile: mobile || '',
-      whatsapp: whatsapp || mobile || '',
+      id: agentData ? agentData.id : `usr_${Date.now()}`,
+      email: effectiveEmail,
+      fullName: effectiveName,
+      mobile: mobile || (agentData ? agentData.phone : ''),
+      whatsapp: whatsapp || mobile || (agentData ? (agentData.whatsapp || agentData.phone) : ''),
       password: password || passwordHash || '',
-      securityPin: securityPin || '',
+      securityPin: securityPin || (agentData ? agentData.gst_number : ''),
       isNewRegistration: Boolean(isNewRegistration),
       role,
       preferredTravelType: preferredTravelType || 'Couple',
       preferredBudgetTier: preferredBudgetTier || 'Comfort'
     });
 
-    broadcastRealtimeEvent('user_activity', { action: role === 'admin' ? 'ADMIN_LOGIN' : 'LOGIN', user });
-    res.json({ success: true, user });
+    const actionName = role === 'agent' ? 'AGENT_LOGIN' : (role === 'admin' ? 'ADMIN_LOGIN' : 'LOGIN');
+    broadcastRealtimeEvent('user_activity', { action: actionName, user, agent: agentData });
+    res.json({ success: true, user, agent: agentData });
   } catch (error) {
     res.status(500).json({ error: 'Authentication failed', details: error.message });
+  }
+});
+
+// ─── 8B. Travel Agent Profile API ───────────────────────────────────────────
+app.get('/api/agent/profile', async (req, res) => {
+  try {
+    const { email, gst } = req.query;
+    if (!email && !gst) return res.status(400).json({ error: 'Email or GST is required' });
+    const agent = await getAgentByEmailOrGst(email || gst);
+    if (!agent) return res.status(404).json({ error: 'Agent profile not found' });
+    res.json({ success: true, agent });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch agent profile', details: error.message });
   }
 });
 
@@ -370,7 +404,7 @@ app.get('/api/wishlist', async (req, res) => {
 });
 
 // ─── 9b. Document & Media Upload ─────────────────────────────────────────────
-app.post('/api/upload-document', async (req, res) => {
+app.post(['/api/upload-document', '/api/upload-image'], async (req, res) => {
   try {
     const { fileName, fileBase64, mimeType } = req.body;
     if (!fileBase64 || !fileName) {
@@ -382,9 +416,13 @@ app.post('/api/upload-document', async (req, res) => {
     const filePath = path.join(uploadsDir, safeName);
     fs.writeFileSync(filePath, buffer);
     const fileUrl = `/uploads/${safeName}`;
+    const host = req.get('host');
+    const protocol = req.protocol || 'http';
+    const fullUrl = host ? `${protocol}://${host}${fileUrl}` : fileUrl;
     res.json({
       success: true,
       url: fileUrl,
+      fullUrl: fullUrl,
       fileName: safeName,
       originalName: fileName,
       size: buffer.length,

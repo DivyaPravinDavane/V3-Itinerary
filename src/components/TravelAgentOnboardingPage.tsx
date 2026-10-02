@@ -308,7 +308,7 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
               </div>
               <h2 className="agent-success-title">Onboarding Submitted Successfully!</h2>
               <p className="agent-success-sub">
-                Welcome aboard, <strong>{agencyName || 'Partner'}</strong>! Your verified travel agency profile has been created in the V3itinerary MySQL database.
+                Welcome aboard, <strong>{agencyName || 'Partner'}</strong>! Your verified travel agency profile has been created in the V3itinerary database.
               </p>
 
               <div className="agent-success-details-box">

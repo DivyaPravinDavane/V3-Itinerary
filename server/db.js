@@ -65,7 +65,7 @@ async function initMysql() {
         full_name VARCHAR(120) NOT NULL,
         email VARCHAR(160) NOT NULL UNIQUE,
         mobile VARCHAR(30),
-        role ENUM('customer', 'admin') DEFAULT 'customer',
+        role ENUM('customer', 'admin', 'agent') DEFAULT 'customer',
         password_hash VARCHAR(255),
         preferred_travel_type VARCHAR(60) DEFAULT 'Family / Leisure',
         preferred_budget_tier VARCHAR(60) DEFAULT 'Standard',
@@ -249,6 +249,13 @@ async function initMysql() {
           await mysqlPool.query(`ALTER TABLE travel_agents ADD COLUMN ${col} ${type}`);
         }
       }
+
+      // Ensure users table role ENUM includes 'agent'
+      try {
+        await mysqlPool.query("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'agent') DEFAULT 'customer'");
+      } catch (roleEnumErr) {
+        // Table already updated or compatible
+      }
     } catch (migErr) {
       console.warn('[MySQL Migration Note]:', migErr.message);
     }
@@ -378,6 +385,32 @@ export async function insertItinerary(it) {
     JSON.stringify(it.exclusions || [])
   ]);
   await logActivity('ITINERARY_SAVED', `Blueprint saved: ${it.title} (${it.destination})`);
+
+  // Synchronize destination table so customer portal reflects it immediately
+  try {
+    const destName = it.destination;
+    if (destName) {
+      const [destRows] = await mysqlPool.query('SELECT id FROM destinations WHERE LOWER(name) = LOWER(?)', [destName]);
+      if (destRows.length === 0) {
+        await saveDestination({
+          name: destName,
+          country: it.country || 'India',
+          region: it.region || 'Domestic',
+          cover_image: it.coverImage || 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&auto=format&fit=crop&q=80',
+          tagline: `Curated verified blueprints for ${destName}`,
+          description: it.overview || `Explore hand-crafted itineraries for ${destName}.`,
+          itinerary_count: 1,
+          starting_price: it.totalAccessPrice || 99
+        });
+      } else {
+        const [cnt] = await mysqlPool.query('SELECT COUNT(*) as cnt FROM itineraries WHERE LOWER(destination) = LOWER(?)', [destName]);
+        await mysqlPool.query('UPDATE destinations SET itinerary_count = ? WHERE id = ?', [cnt[0]?.cnt || 1, destRows[0].id]);
+      }
+    }
+  } catch (dErr) {
+    console.warn('[Destination Sync Note]:', dErr.message);
+  }
+
   return getItineraryById(itinId);
 }
 
@@ -391,9 +424,20 @@ export async function updateItineraryPopular(id, isPopular) {
 }
 
 export async function deleteItinerary(id) {
-  const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ?', [id]);
-  await logActivity('ITINERARY_DELETED', `Deleted itinerary ${id}`);
-  return result;
+  try {
+    const [existing] = await mysqlPool.query('SELECT destination FROM itineraries WHERE id = ?', [id]);
+    const destName = existing[0]?.destination;
+    const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ?', [id]);
+    if (destName) {
+      const [cnt] = await mysqlPool.query('SELECT COUNT(*) as cnt FROM itineraries WHERE LOWER(destination) = LOWER(?)', [destName]);
+      await mysqlPool.query('UPDATE destinations SET itinerary_count = ? WHERE LOWER(name) = LOWER(?)', [cnt[0]?.cnt || 0, destName]);
+    }
+    await logActivity('ITINERARY_DELETED', `Deleted itinerary ${id}`);
+    return result;
+  } catch (err) {
+    console.error('Delete itinerary error:', err);
+    throw err;
+  }
 }
 
 export async function getItineraryCount() {
@@ -765,6 +809,16 @@ export async function updateAgentStatus(agentId, status) {
   await logActivity('AGENT_STATUS_UPDATE', `Agent ${agentId} status → ${status}`);
 }
 
+export async function getAgentByEmailOrGst(identifier) {
+  if (!identifier) return null;
+  const clean = identifier.trim();
+  const [rows] = await mysqlPool.query(
+    'SELECT * FROM travel_agents WHERE LOWER(email) = LOWER(?) OR UPPER(gst_number) = UPPER(?) OR LOWER(agency_name) = LOWER(?) LIMIT 1',
+    [clean, clean, clean]
+  );
+  return rows[0] || null;
+}
+
 // ─── WISHLIST ─────────────────────────────────────────────────────────────────
 export async function toggleWishlist(userEmail, itineraryId) {
   const [existing] = await mysqlPool.query(
@@ -960,6 +1014,7 @@ export default {
   saveAgent,
   getAgents,
   updateAgentStatus,
+  getAgentByEmailOrGst,
   // Wishlist
   toggleWishlist,
   getWishlist,

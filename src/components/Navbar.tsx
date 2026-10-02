@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { ChevronDown, Heart, Briefcase, User, LogOut, FileText, Menu, X, LogIn, ShieldCheck, Settings } from 'lucide-react';
+import { 
+  ChevronDown, Heart, Briefcase, User, LogOut, FileText, 
+  Menu, X, LogIn, ShieldCheck, Settings, Compass, Home, 
+  HelpCircle, Info, Mail, ChevronRight 
+} from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface NavbarProps {
   user: UserProfile;
-  currentPage?: 'home' | 'destinations';
-  onOpenAuth: (mode?: 'login' | 'signup', role?: 'customer' | 'admin') => void;
+  currentPage?: 'home' | 'destinations' | 'agent-studio';
+  onOpenAuth: (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => void;
   onLogout: () => void;
   onOpenDashboard: (tab: 'trips' | 'saved' | 'orders' | 'profile') => void;
   onOpenAdminDashboard: () => void;
+  onOpenAgentDashboard?: () => void;
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations') => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio') => void;
   isAgentPageOpen?: boolean;
 }
 
@@ -22,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenDashboard,
   onOpenAdminDashboard,
+  onOpenAgentDashboard,
   onOpenAgentModal,
   onScrollToSection,
   onNavigatePage,
@@ -32,6 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [browseDropdownOpen, setBrowseDropdownOpen] = useState(false);
 
   const isAdmin = user.isLoggedIn && user.role === 'admin';
+  const isAgent = user.isLoggedIn && user.role === 'agent';
+  const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'Agency Partner';
 
   return (
     <header className="site-header">
@@ -74,6 +82,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Destinations
             </button>
+
+            {isAgent && (
+              <button 
+                className={`nav-item ${currentPage === 'agent-studio' ? 'active' : ''}`} 
+                onClick={() => {
+                  if (onNavigatePage) onNavigatePage('agent-studio');
+                  else if (onOpenAgentDashboard) onOpenAgentDashboard();
+                }}
+              >
+                Agent Studio
+              </button>
+            )}
             
             <div className="nav-dropdown-wrapper">
               <button 
@@ -94,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     else onScrollToSection('destinations'); 
                     setBrowseDropdownOpen(false); 
                   }}>
-                    🌟 All Destinations & Blueprints
+                    🌟 All Destinations & Itineraries
                   </button>
                   <button className="dropdown-item" onClick={() => { 
                     if (onNavigatePage) onNavigatePage('destinations');
@@ -115,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     else onScrollToSection('destinations'); 
                     setBrowseDropdownOpen(false); 
                   }}>
-                    🕌 Cultural & Heritage Blueprints
+                    🕌 Cultural & Heritage Itineraries
                   </button>
                 </div>
               )}
@@ -229,13 +249,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                     )}
                   </div>
                 </>
+              ) : isAgent ? (
+                /* TRAVEL AGENT LOGGED IN BUTTONS */
+                <>
+                  <button 
+                    className={`action-agent-pill ${currentPage === 'agent-studio' ? 'active' : ''}`}
+                    onClick={() => {
+                      if (onNavigatePage) onNavigatePage('agent-studio');
+                      else if (onOpenAgentDashboard) onOpenAgentDashboard();
+                    }}
+                    title="Open Travel Agent Studio (Create & Manage Itineraries)"
+                  >
+                    <Briefcase size={17} />
+                    <span className="font-semibold">Agent Studio</span>
+                  </button>
+
+                  <div className="user-profile-menu">
+                    <button 
+                      className="avatar-btn agent-avatar-btn" 
+                      onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                      title={`Agent: ${agencyName}`}
+                    >
+                      <div className="avatar-circle agent-circle">
+                        💼
+                      </div>
+                      <span className="user-name-short">{agencyName.split(' ')[0]}</span>
+                      <ChevronDown size={14} />
+                    </button>
+
+                    {userDropdownOpen && (
+                      <div className="dropdown-menu profile-drop shadow-xl" onMouseLeave={() => setUserDropdownOpen(false)}>
+                        <div className="profile-header-summary agent-summary">
+                          <p className="profile-name">{agencyName}</p>
+                          <p className="profile-email">{user.email}</p>
+                          <span className="role-tag-agent">Verified Travel Agent</span>
+                        </div>
+                        <div className="dropdown-divider"></div>
+                        <button className="dropdown-item" onClick={() => { if (onNavigatePage) onNavigatePage('agent-studio'); else if (onOpenAgentDashboard) onOpenAgentDashboard(); setUserDropdownOpen(false); }}>
+                          <FileText size={16} /> Manage Itineraries
+                        </button>
+                        <button className="dropdown-item" onClick={() => { if (onNavigatePage) onNavigatePage('agent-studio'); else if (onOpenAgentDashboard) onOpenAgentDashboard(); setUserDropdownOpen(false); }}>
+                          <Briefcase size={16} /> Traveler Orders & Leads
+                        </button>
+                        <button className="dropdown-item" onClick={() => { if (onNavigatePage) onNavigatePage('agent-studio'); else if (onOpenAgentDashboard) onOpenAgentDashboard(); setUserDropdownOpen(false); }}>
+                          <ShieldCheck size={16} /> Agency KYC & Profile
+                        </button>
+                        <div className="dropdown-divider"></div>
+                        <button className="dropdown-item danger" onClick={() => { onLogout(); setUserDropdownOpen(false); }}>
+                          <LogOut size={16} /> Sign Out Agent
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
                 /* CUSTOMER LOGGED IN BUTTONS */
                 <>
                   <button 
                     className="action-trip-pill" 
                     onClick={() => onOpenDashboard('trips')}
-                    title="My Purchased Blueprints"
+                    title="My Purchased Itineraries"
                   >
                     <Briefcase size={17} />
                     <span className="trip-pill-text">My Trips ({user.purchasedOrders?.length || 0})</span>
@@ -297,7 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button 
-                className="btn-signup-solid" 
+                className="btn-signup-solid header-signup-btn" 
                 onClick={() => onOpenAuth('signup')}
                 id="header-signup-btn"
                 title="Create an account"
@@ -313,83 +386,156 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="mobile-nav-drawer">
-          <button 
-            className={`mobile-nav-link ${currentPage === 'home' ? 'font-bold text-blue-600' : ''}`} 
-            onClick={() => { 
-              if (onNavigatePage) onNavigatePage('home');
-              else onScrollToSection('hero'); 
+        <div className="mobile-nav-drawer shadow-2xl">
+          <div className="mobile-drawer-header">
+            <span className="mobile-drawer-title">Navigation Menu</span>
+            <button 
+              type="button" 
+              className="mobile-drawer-close"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close Menu"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="mobile-nav-links-list">
+            <button 
+              className={`mobile-nav-link ${currentPage === 'home' && !isAgentPageOpen ? 'active' : ''}`} 
+              onClick={() => { 
+                if (onNavigatePage) onNavigatePage('home');
+                else onScrollToSection('hero'); 
+                setMobileMenuOpen(false); 
+              }}
+            >
+              <div className="mobile-link-left">
+                <Home size={17} className="mobile-link-icon" />
+                <span>Home</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
+
+            <button 
+              className={`mobile-nav-link ${currentPage === 'destinations' ? 'active' : ''}`} 
+              onClick={() => { 
+                if (onNavigatePage) onNavigatePage('destinations');
+                else onScrollToSection('destinations'); 
+                setMobileMenuOpen(false); 
+              }}
+            >
+              <div className="mobile-link-left">
+                <Compass size={17} className="mobile-link-icon" />
+                <span>Explore Destinations</span>
+              </div>
+              <span className="mobile-link-badge">New</span>
+            </button>
+
+            <button 
+              className="mobile-nav-link" 
+              onClick={() => { 
+                if (onNavigatePage) onNavigatePage('destinations');
+                else onScrollToSection('destinations'); 
+                setMobileMenuOpen(false); 
+              }}
+            >
+              <div className="mobile-link-left">
+                <FileText size={17} className="mobile-link-icon" />
+                <span>Browse Itineraries</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
+
+            {isAgent && (
+              <button 
+                className={`mobile-nav-link ${currentPage === 'agent-studio' ? 'active' : ''}`} 
+                onClick={() => { 
+                  if (onNavigatePage) onNavigatePage('agent-studio');
+                  else if (onOpenAgentDashboard) onOpenAgentDashboard();
+                  setMobileMenuOpen(false); 
+                }}
+              >
+                <div className="mobile-link-left">
+                  <Briefcase size={17} className="mobile-link-icon text-emerald-600" />
+                  <span>Agent Studio</span>
+                </div>
+                <ChevronRight size={15} className="text-slate-400" />
+              </button>
+            )}
+
+            <button 
+              className={`mobile-nav-link ${isAgentPageOpen ? 'active' : ''}`} 
+              onClick={() => { onOpenAgentModal(); setMobileMenuOpen(false); }}
+            >
+              <div className="mobile-link-left">
+                <Briefcase size={17} className="mobile-link-icon text-amber-500" />
+                <span>For Travel Agents</span>
+              </div>
+              <span className="mobile-link-tag">Partner</span>
+            </button>
+
+            <button className="mobile-nav-link" onClick={() => { 
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('how-it-works'), 60);
+              } else {
+                onScrollToSection('how-it-works');
+              }
               setMobileMenuOpen(false); 
-            }}
-          >
-            Home
-          </button>
-          <button 
-            className={`mobile-nav-link ${currentPage === 'destinations' ? 'font-bold text-blue-600' : ''}`} 
-            onClick={() => { 
-              if (onNavigatePage) onNavigatePage('destinations');
-              else onScrollToSection('destinations'); 
+            }}>
+              <div className="mobile-link-left">
+                <HelpCircle size={17} className="mobile-link-icon" />
+                <span>How It Works</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
+
+            <button className="mobile-nav-link" onClick={() => { 
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('trust-pillars'), 60);
+              } else {
+                onScrollToSection('trust-pillars');
+              }
               setMobileMenuOpen(false); 
-            }}
-          >
-            Destinations
-          </button>
-          <button 
-            className="mobile-nav-link" 
-            onClick={() => { 
-              if (onNavigatePage) onNavigatePage('destinations');
-              else onScrollToSection('destinations'); 
+            }}>
+              <div className="mobile-link-left">
+                <Info size={17} className="mobile-link-icon" />
+                <span>About Us</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
+
+            <button className="mobile-nav-link" onClick={() => { onOpenDashboard('saved'); setMobileMenuOpen(false); }}>
+              <div className="mobile-link-left">
+                <Heart size={17} className="mobile-link-icon text-rose-500" />
+                <span>Saved Wishlist</span>
+              </div>
+              <span className="mobile-link-count">{user.savedItineraryIds?.length || 0}</span>
+            </button>
+
+            <button className="mobile-nav-link" onClick={() => { 
+              if (onNavigatePage && currentPage !== 'home') {
+                onNavigatePage('home');
+                setTimeout(() => onScrollToSection('footer'), 60);
+              } else {
+                onScrollToSection('footer');
+              }
               setMobileMenuOpen(false); 
-            }}
-          >
-            Browse Itineraries
-          </button>
-          <button className="mobile-nav-link" onClick={() => { onOpenAgentModal(); setMobileMenuOpen(false); }}>
-            For Travel Agents
-          </button>
-          <button className="mobile-nav-link" onClick={() => { 
-            if (onNavigatePage && currentPage !== 'home') {
-              onNavigatePage('home');
-              setTimeout(() => onScrollToSection('how-it-works'), 60);
-            } else {
-              onScrollToSection('how-it-works');
-            }
-            setMobileMenuOpen(false); 
-          }}>
-            How It Works
-          </button>
-          <button className="mobile-nav-link" onClick={() => { 
-            if (onNavigatePage && currentPage !== 'home') {
-              onNavigatePage('home');
-              setTimeout(() => onScrollToSection('trust-pillars'), 60);
-            } else {
-              onScrollToSection('trust-pillars');
-            }
-            setMobileMenuOpen(false); 
-          }}>
-            About Us
-          </button>
-          <button className="mobile-nav-link" onClick={() => { onOpenDashboard('saved'); setMobileMenuOpen(false); }}>
-            Saved Wishlist ({user.savedItineraryIds?.length || 0})
-          </button>
-          <button className="mobile-nav-link" onClick={() => { 
-            if (onNavigatePage && currentPage !== 'home') {
-              onNavigatePage('home');
-              setTimeout(() => onScrollToSection('footer'), 60);
-            } else {
-              onScrollToSection('footer');
-            }
-            setMobileMenuOpen(false); 
-          }}>
-            Contact Us
-          </button>
+            }}>
+              <div className="mobile-link-left">
+                <Mail size={17} className="mobile-link-icon" />
+                <span>Contact Us</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
+          </div>
           
           <div className="mobile-nav-auth">
             {!user.isLoggedIn ? (
@@ -414,6 +560,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button className="btn-login-ghost full-w" onClick={() => { onLogout(); setMobileMenuOpen(false); }}>
                   Logout Admin
+                </button>
+              </div>
+            ) : isAgent ? (
+              <div className="mobile-auth-column">
+                <button className="btn-agent-solid full-w mb-2" onClick={() => { if (onNavigatePage) onNavigatePage('agent-studio'); else if (onOpenAgentDashboard) onOpenAgentDashboard(); setMobileMenuOpen(false); }}>
+                  <Briefcase size={16} /> Agent Studio
+                </button>
+                <button className="btn-login-ghost full-w" onClick={() => { onLogout(); setMobileMenuOpen(false); }}>
+                  Logout Agent
                 </button>
               </div>
             ) : (

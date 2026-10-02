@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
   Clock, CheckCircle2, ChevronRight,
-  Filter, MapPin, Heart, ShieldCheck
+  Filter, MapPin, Heart, ShieldCheck, X
 } from 'lucide-react';
 import type { Itinerary } from '../types';
+import { checkDestinationMatchesQuery } from '../utils/destinationCities';
 
 interface DestinationPackagesModalProps {
   destinationName: string | null;
@@ -14,6 +15,7 @@ interface DestinationPackagesModalProps {
   onSelectPackage: (itinerary: Itinerary) => void;
   onPayToView: (itinerary: Itinerary) => void;
   onToggleSave: (id: string, e: React.MouseEvent) => void;
+  onSelectDestination?: (destinationName: string) => void;
   backLabel?: string;
 }
 
@@ -25,6 +27,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
   onClose,
   onSelectPackage,
   onToggleSave,
+  onSelectDestination,
   backLabel
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -38,16 +41,50 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
     it => it.destination.toLowerCase() === destinationName.toLowerCase()
   );
 
+  let otherDestinationMatch: { destination: string; matchedCity?: string } | null = null;
+
   // Apply search
   if (searchInput.trim()) {
-    const q = searchInput.toLowerCase();
-    const searched = packages.filter(
-      p => p.title.toLowerCase().includes(q) || 
-           p.overview.toLowerCase().includes(q) ||
-           p.travelerType.toLowerCase().includes(q)
-    );
-    if (searched.length > 0) {
-      packages = searched;
+    const q = searchInput.toLowerCase().trim();
+    if (q !== destinationName.toLowerCase()) {
+      const searched = packages.filter(p => {
+        if (p.title.toLowerCase().includes(q)) return true;
+        if (p.overview.toLowerCase().includes(q)) return true;
+        if (p.travelerType.toLowerCase().includes(q)) return true;
+        if (p.days && Array.isArray(p.days)) {
+          const matchDay = p.days.some(d => 
+            (d.title && d.title.toLowerCase().includes(q)) ||
+            (d.highlights && Array.isArray(d.highlights) && d.highlights.some(h => h.toLowerCase().includes(q))) ||
+            (d.morning && d.morning.toLowerCase().includes(q)) ||
+            (d.afternoon && d.afternoon.toLowerCase().includes(q)) ||
+            (d.evening && d.evening.toLowerCase().includes(q))
+          );
+          if (matchDay) return true;
+        }
+        if (p.hotels && Array.isArray(p.hotels)) {
+          return p.hotels.some(h => h.name && h.name.toLowerCase().includes(q));
+        }
+        return false;
+      });
+
+      if (searched.length > 0) {
+        packages = searched;
+      } else {
+        // Find if this query/city belongs to another destination
+        for (const it of allItineraries) {
+          if (it.destination.toLowerCase() !== destinationName.toLowerCase()) {
+            const check = checkDestinationMatchesQuery(it.destination, it.country, q, allItineraries, it.overview);
+            if (check.isMatch) {
+              otherDestinationMatch = {
+                destination: it.destination,
+                matchedCity: check.matchedCity || searchInput
+              };
+              break;
+            }
+          }
+        }
+        packages = [];
+      }
     }
   }
 
@@ -73,16 +110,26 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
       <div className="mmt-top-search-strip">
         <div className="mmt-search-container">
           <div className="mmt-input-cell dest-cell">
-            <label className="mmt-cell-lbl">DESTINATION OR ACTIVITY</label>
-            <div className="mmt-cell-val flex items-center gap-1.5">
+            <label className="mmt-cell-lbl">DESTINATION, CITY OR ATTRACTION</label>
+            <div className="mmt-cell-val flex items-center gap-1.5 relative">
               <MapPin size={16} className="text-blue-600 shrink-0" />
               <input 
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Enter destination or attraction..."
+                placeholder="Enter destination, city, or attraction..."
                 className="mmt-search-input"
               />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="mmt-search-clear-btn"
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -224,23 +271,54 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
           </div>
 
           {packages.length === 0 ? (
-            <div className="empty-packages-placeholder py-12 px-6 text-center bg-white rounded-xl border border-slate-200 my-6 shadow-sm">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                <MapPin size={28} />
+            otherDestinationMatch ? (
+              <div className="empty-packages-placeholder py-10 px-6 text-center bg-blue-50/60 rounded-xl border border-blue-200 my-6 shadow-sm">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <MapPin size={26} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-1">
+                  Looking for &ldquo;{otherDestinationMatch.matchedCity || searchInput}&rdquo;?
+                </h3>
+                <p className="text-slate-600 max-w-md mx-auto mb-5 text-sm">
+                  {otherDestinationMatch.matchedCity || searchInput} is located in <strong>{otherDestinationMatch.destination}</strong>! We have handcrafted travel blueprints ready for it.
+                </p>
+                {onSelectDestination ? (
+                  <button 
+                    onClick={() => onSelectDestination(otherDestinationMatch!.destination)}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2 text-sm"
+                  >
+                    <span>View {otherDestinationMatch.destination} Packages</span>
+                    <ChevronRight size={16} />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={onClose}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2 text-sm"
+                  >
+                    <span>Explore {otherDestinationMatch.destination}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">
-                Curating New Blueprints for {destinationName}
-              </h3>
-              <p className="text-slate-600 max-w-md mx-auto mb-6 text-sm">
-                Our verified travel specialists are putting together turn-by-turn day-by-day itineraries for {destinationName}. Check back shortly or explore our other top destinations!
-              </p>
-              <button 
-                onClick={onClose}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2"
-              >
-                Explore Other Destinations
-              </button>
-            </div>
+            ) : (
+              <div className="empty-packages-placeholder py-12 px-6 text-center bg-white rounded-xl border border-slate-200 my-6 shadow-sm">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                  <MapPin size={28} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">
+                  Curating New Blueprints for {destinationName}
+                </h3>
+                <p className="text-slate-600 max-w-md mx-auto mb-6 text-sm">
+                  Our verified travel specialists are putting together turn-by-turn day-by-day itineraries for {destinationName}. Check back shortly or explore our other top destinations!
+                </p>
+                <button 
+                  onClick={onClose}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2"
+                >
+                  Explore Other Destinations
+                </button>
+              </div>
+            )
           ) : (
             <div className="mmt-packages-3col-grid">
               {packages.map((pkg) => {

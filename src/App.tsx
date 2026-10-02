@@ -12,11 +12,13 @@ import { CustomerDashboardModal } from './components/CustomerDashboardModal';
 import { TravelAgentOnboardingPage } from './components/TravelAgentOnboardingPage';
 import { AuthModal } from './components/AuthModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
+import { AgentDashboardModal } from './components/AgentDashboardModal';
 import { DestinationPackagesModal } from './components/DestinationPackagesModal';
 import { DestinationsPage } from './components/DestinationsPage';
 import { ItineraryDetailModal } from './components/ItineraryDetailModal';
 import { RazorpayRedirectGateway } from './components/RazorpayRedirectGateway';
 import { POPULAR_DESTINATIONS as FALLBACK_POPULAR_DESTINATIONS, ALL_ITINERARIES as FALLBACK_ALL_ITINERARIES } from './data/mockData';
+import { checkDestinationMatchesQuery } from './utils/destinationCities';
 import { 
   saveOrderToBackend, 
   sendItineraryPdfToEmail, 
@@ -237,14 +239,15 @@ export function App() {
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [authRole, setAuthRole] = useState<'customer' | 'admin'>('customer');
+  const [authRole, setAuthRole] = useState<'customer' | 'admin' | 'agent'>('customer');
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Dedicated Page Routing ('home' | 'destinations')
-  const [currentPage, setCurrentPage] = useState<'home' | 'destinations'>(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#destinations') {
-      return 'destinations';
+  // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio')
+  const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio'>(() => {
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#destinations') return 'destinations';
+      if (window.location.hash === '#agent-studio') return 'agent-studio';
     }
     return 'home';
   });
@@ -256,6 +259,9 @@ export function App() {
       if (hash === '#destinations') {
         setCurrentPage('destinations');
         setSelectedDestinationName(null);
+      } else if (hash === '#agent-studio') {
+        setCurrentPage('agent-studio');
+        setSelectedDestinationName(null);
       } else if (hash === '#home' || hash === '') {
         setCurrentPage('home');
       }
@@ -264,7 +270,7 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const handleNavigatePage = (page: 'home' | 'destinations') => {
+  const handleNavigatePage = (page: 'home' | 'destinations' | 'agent-studio') => {
     setCurrentPage(page);
     setSelectedDestinationName(null);
     window.location.hash = `#${page}`;
@@ -294,11 +300,19 @@ export function App() {
         if (it.slug && it.slug.toLowerCase().includes(q)) return true;
         if (it.travelerType && it.travelerType.toLowerCase().includes(q)) return true;
         if (it.days && Array.isArray(it.days)) {
-          return it.days.some(d => 
+          const matchDay = it.days.some(d => 
             (d.title && d.title.toLowerCase().includes(q)) ||
-            (d.highlights && Array.isArray(d.highlights) && d.highlights.some(h => h.toLowerCase().includes(q)))
+            (d.highlights && Array.isArray(d.highlights) && d.highlights.some(h => h.toLowerCase().includes(q))) ||
+            (d.morning && d.morning.toLowerCase().includes(q)) ||
+            (d.afternoon && d.afternoon.toLowerCase().includes(q)) ||
+            (d.evening && d.evening.toLowerCase().includes(q))
           );
+          if (matchDay) return true;
         }
+        // Match associated cities for destination
+        const cityMatch = checkDestinationMatchesQuery(it.destination, it.country, q, allItineraries, it.overview);
+        if (cityMatch.isMatch) return true;
+
         return false;
       });
     }
@@ -332,17 +346,23 @@ export function App() {
 
     setFilteredDestinations(results);
 
-    // Smooth scroll down to results section
+    // Smooth scroll down to results section with sticky header offset
     setTimeout(() => {
       const el = document.getElementById('destinations');
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const headerOffset = 90;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth'
+        });
       }
-    }, 60);
+    }, 80);
 
     if (hasFilter) {
       if (results.length > 0) {
-        showToast(`Found ${results.length} verified ${results.length === 1 ? 'blueprint' : 'blueprints'} matching your search!`);
+        showToast(`Found ${results.length} verified ${results.length === 1 ? 'itinerary' : 'itineraries'} matching your search!`);
       } else {
         showToast(`No exact match found. Try adjusting filters.`);
       }
@@ -547,7 +567,7 @@ export function App() {
     setGatewayItinerary(null);
     setCheckoutItinerary(null);
     setSelectedItinerary(targetItinerary); // Immediately display the full unlocked itinerary with the PDF!
-    showToast(`🎉 Payment Verified! Blueprint PDF emailed to ${targetEmail} & unlocked below.`);
+    showToast(`🎉 Payment Verified! Itinerary PDF emailed to ${targetEmail} & unlocked below.`);
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -561,7 +581,7 @@ export function App() {
     return user.purchasedOrders.some(order => order.itineraryId === itineraryId);
   };
 
-  const handleOpenAuth = (mode?: 'login' | 'signup', role?: 'customer' | 'admin') => {
+  const handleOpenAuth = (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => {
     if (mode) setAuthMode(mode);
     if (role) setAuthRole(role);
     setAuthModalOpen(true);
@@ -592,6 +612,7 @@ export function App() {
           setDashboardOpen(true);
         }}
         onOpenAdminDashboard={() => setAdminDashboardOpen(true)}
+        onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
         onOpenAgentModal={() => setAgentModalOpen(true)}
         onScrollToSection={scrollToSection}
         isAgentPageOpen={agentModalOpen}
@@ -631,6 +652,10 @@ export function App() {
             handleStartCheckout(itinerary);
           }}
           onToggleSave={handleToggleSave}
+          onSelectDestination={(newDest) => {
+            setSelectedDestinationName(newDest);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       ) : currentPage === 'destinations' ? (
         <>
@@ -647,6 +672,30 @@ export function App() {
             }}
             onToggleSave={handleToggleSave}
             onBackToHome={() => handleNavigatePage('home')}
+          />
+
+          {/* Footer */}
+          <Footer 
+            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onScrollToSection={scrollToSection}
+            onSelectDestination={(name) => {
+              setSelectedDestinationName(name);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigatePage={handleNavigatePage}
+          />
+        </>
+      ) : currentPage === 'agent-studio' ? (
+        <>
+          <AgentDashboardModal 
+            isPage={true}
+            user={user}
+            allItineraries={allItineraries}
+            onBackToHome={() => handleNavigatePage('home')}
+            onClose={() => handleNavigatePage('home')}
+            onSelectItinerary={(it) => setSelectedItinerary(it)}
+            onDataRefresh={loadData}
+            onOpenAgentOnboarding={() => setAgentModalOpen(true)}
           />
 
           {/* Footer */}
@@ -796,12 +845,16 @@ export function App() {
         onClose={() => setAgentModalOpen(false)}
       />
 
-      {/* MODAL 6: Customer & Admin Auth Modal */}
+      {/* MODAL 6: Customer, Travel Agent & Admin Auth Modal */}
       <AuthModal 
         isOpen={authModalOpen}
         initialMode={authMode}
         initialRole={authRole}
         onClose={() => setAuthModalOpen(false)}
+        onOpenAgentOnboarding={() => {
+          setAuthModalOpen(false);
+          setAgentModalOpen(true);
+        }}
         onLoginSuccess={(profile) => {
           localStorage.setItem('v3_auth_active', 'true');
           setUser(prev => ({
@@ -811,6 +864,9 @@ export function App() {
           }));
           if (profile.role === 'admin') {
             showToast('🛡️ Signed in as V3 Platform Administrator');
+          } else if (profile.role === 'agent') {
+            showToast(`💼 Welcome to Travel Agent Studio, ${profile.agentDetails?.agencyName || profile.fullName}!`);
+            handleNavigatePage('agent-studio');
           } else {
             showToast(`Welcome back, ${profile.fullName || user.fullName}!`);
           }

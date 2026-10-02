@@ -1,9 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, MapPin, Heart, ArrowRight, Compass, ShieldCheck, 
-  Sparkles, CheckCircle2, ChevronRight, Home, Globe
+  Sparkles, CheckCircle2, ChevronRight, Home, Globe, X
 } from 'lucide-react';
 import type { Itinerary, Destination } from '../types';
+import { 
+  getCitiesForDestination, 
+  checkDestinationMatchesQuery, 
+  POPULAR_SEARCH_CITIES 
+} from '../utils/destinationCities';
 
 interface DestinationsPageProps {
   destinationsMaster: Destination[];
@@ -28,6 +33,9 @@ interface DestinationCardData {
   durationRange: string;
   vibes: string[];
   candidateIds: string[];
+  cities: string[];
+  matchedCity?: string;
+  matchScore?: number;
 }
 
 // Curated metadata enrichment for destination vibes and aesthetics
@@ -51,6 +59,11 @@ const DESTINATION_META: Record<string, { vibes: string[]; desc: string; bestTime
     vibes: ['beach', 'culture', 'nightlife'],
     desc: 'Vibrant Bangkok markets, Phuket limestone islands & rich Buddhist temples.',
     bestTime: 'Nov - Apr (Sunny & Cool)'
+  },
+  'Switzerland': {
+    vibes: ['mountain', 'snow', 'nature', 'luxury'],
+    desc: 'Alpine glaciers of Mt Titlis & Jungfraujoch, crystal Lake Lucerne & world-class scenic trains.',
+    bestTime: 'May - Oct (Green) & Dec - Apr (Snow)'
   },
   'Europe': {
     vibes: ['culture', 'mountain', 'historic'],
@@ -131,6 +144,102 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
   const [regionFilter, setRegionFilter] = useState<'all' | 'Domestic' | 'International'>('all');
   const [vibeFilter, setVibeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'name' | 'packages'>('popular');
+  const [showLiveDropdown, setShowLiveDropdown] = useState(false);
+  const [highlightedDestId, setHighlightedDestId] = useState<string | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setShowLiveDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Smooth scroll page directly to the matching destination card with header offset
+  const scrollToDestination = (destName?: string, destId?: string) => {
+    setTimeout(() => {
+      let targetEl: HTMLElement | null = null;
+      if (destName) {
+        targetEl = document.getElementById(`dest-card-${destName.toLowerCase().replace(/\s+/g, '-')}`);
+      }
+      if (!targetEl && destId) {
+        targetEl = document.getElementById(`dest-card-${destId}`);
+      }
+      if (!targetEl) {
+        targetEl = document.getElementById('dest-grid-section');
+      }
+
+      if (targetEl) {
+        const headerOffset = 96;
+        const elementPosition = targetEl.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth'
+        });
+      }
+
+      const highlightKey = destName ? destName.toLowerCase().replace(/\s+/g, '-') : (destId || null);
+      if (highlightKey) {
+        setHighlightedDestId(highlightKey);
+        setTimeout(() => setHighlightedDestId(null), 4000);
+      }
+    }, 110);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent, forceRedirect = false) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setShowLiveDropdown(false);
+
+    const q = searchQuery.toLowerCase().trim();
+    let topMatch: DestinationCardData | undefined = filteredDestinations[0];
+    if (!topMatch) {
+      topMatch = destinationsList.find(d => {
+        const res = checkDestinationMatchesQuery(d.name, d.country, q, allItineraries, d.description, d.vibes);
+        return res.isMatch;
+      });
+    }
+
+    if (topMatch) {
+      if (forceRedirect) {
+        // Direct redirect on Enter key: fulfills "when i search any city it should redirect"
+        onSelectDestination(topMatch.name);
+      } else {
+        // Smooth scroll straight down to the destination card and show it: fulfills "or the page should go there and show it to the user"
+        scrollToDestination(topMatch.name, topMatch.id);
+      }
+    } else {
+      scrollToDestination();
+    }
+  };
+
+  const handleSelectCityChip = (city: string) => {
+    setSearchQuery(city);
+    setShowLiveDropdown(false);
+    const q = city.toLowerCase();
+    const matched = destinationsList.find(d => {
+      const res = checkDestinationMatchesQuery(d.name, d.country, q, allItineraries);
+      return res.isMatch;
+    });
+    scrollToDestination(matched?.name, matched?.id);
+  };
+
+  const handleDropdownSelect = (destName: string, shouldRedirectDirectly = true) => {
+    setShowLiveDropdown(false);
+    if (shouldRedirectDirectly) {
+      // Direct redirect to the destination's packages
+      onSelectDestination(destName);
+    } else {
+      setSearchQuery(destName);
+      scrollToDestination(destName);
+    }
+  };
 
   // Build unified and deduplicated list of destinations
   const destinationsList: DestinationCardData[] = useMemo(() => {
@@ -167,6 +276,8 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
           ...matchingItineraries.map(it => it.id)
         ].filter(Boolean) as string[];
 
+        const cities = getCitiesForDestination(destName, allItineraries);
+
         destMap.set(destName.toLowerCase(), {
           id: targetId,
           name: destName,
@@ -179,7 +290,8 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
           startingPrice: m.starting_price || m.startingPrice || primaryIt?.accessPrice || 99,
           durationRange,
           vibes: meta.vibes,
-          candidateIds
+          candidateIds,
+          cities
         });
       });
     }
@@ -211,6 +323,8 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
           ...matchingItineraries.map(i => i.id)
         ];
 
+        const cities = getCitiesForDestination(destName, allItineraries);
+
         destMap.set(key, {
           id: it.id,
           name: destName,
@@ -223,7 +337,8 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
           startingPrice: it.accessPrice || 99,
           durationRange,
           vibes: meta.vibes,
-          candidateIds
+          candidateIds,
+          cities
         });
       }
     });
@@ -231,19 +346,32 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
     return Array.from(destMap.values());
   }, [destinationsMaster, allItineraries]);
 
-  // Filter & Search
+  // Filter & Search with Intelligent City & Destination Match Engine
   const filteredDestinations = useMemo(() => {
-    let result = [...destinationsList];
+    let result: DestinationCardData[] = [];
+    const q = searchQuery.toLowerCase().trim();
 
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(d => 
-        d.name.toLowerCase().includes(q) ||
-        d.country.toLowerCase().includes(q) ||
-        d.description.toLowerCase().includes(q) ||
-        d.vibes.some(v => v.includes(q))
-      );
+    if (q) {
+      destinationsList.forEach(d => {
+        const matchRes = checkDestinationMatchesQuery(
+          d.name,
+          d.country,
+          q,
+          allItineraries,
+          d.description,
+          d.vibes
+        );
+
+        if (matchRes.isMatch) {
+          result.push({
+            ...d,
+            matchedCity: matchRes.matchedCity,
+            matchScore: matchRes.score
+          });
+        }
+      });
+    } else {
+      result = destinationsList.map(d => ({ ...d, matchedCity: undefined, matchScore: 0 }));
     }
 
     // Region filter
@@ -261,6 +389,9 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === 'packages') {
       result.sort((a, b) => b.itineraryCount - a.itineraryCount);
+    } else if (q) {
+      // Prioritize best city/destination match score first when searching!
+      result.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
     } else {
       // Default: Popular / Curated order
       const popularPriority: Record<string, number> = {
@@ -273,6 +404,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
         'bali': 80,
         'kerala': 78,
         'manali': 75,
+        'switzerland': 74,
         'europe': 72,
         'rajasthan': 70,
         'ladakh': 68,
@@ -290,7 +422,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
     }
 
     return result;
-  }, [destinationsList, searchQuery, regionFilter, vibeFilter, sortBy]);
+  }, [destinationsList, searchQuery, regionFilter, vibeFilter, sortBy, allItineraries]);
 
   // Region counts for tab badges
   const counts = useMemo(() => {
@@ -344,25 +476,118 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
             Explore {counts.total} handpicked vacation spots across India and the globe. Every destination features turn-by-turn blueprints with hourly timings, hotel recommendations, and certified GST travel agents for just ₹99.
           </p>
 
-          {/* Quick Search Input */}
-          <div className="dest-search-bar-wrap shadow-lg">
-            <Search size={20} className="dest-search-icon" />
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by destination name, country, or vibe (e.g. Dubai, Kashmir, Beaches)..."
-              className="dest-search-input"
-            />
-            {searchQuery && (
+          {/* Quick Search Form with Live Dropdown & Smooth Scroll */}
+          <div ref={searchWrapRef} className="dest-search-outer-wrap">
+            <form onSubmit={(e) => handleSearchSubmit(e, true)} className="dest-search-bar-wrap shadow-xl">
+              <Search size={20} className="dest-search-icon" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowLiveDropdown(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) setShowLiveDropdown(true);
+                }}
+                placeholder="Search cities (e.g. Paris, Zurich, Gulmarg, Ubud, Phuket, Munnar) or destinations..."
+                className="dest-search-input"
+              />
+              {searchQuery && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowLiveDropdown(false);
+                  }}
+                  className="dest-search-clear"
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
               <button 
-                onClick={() => setSearchQuery('')}
-                className="dest-search-clear"
-                title="Clear search"
+                type="button"
+                onClick={(e) => handleSearchSubmit(e, false)}
+                className="dest-search-submit-btn"
+                title="Scroll down and show matching destination"
               >
-                ×
+                <span>Find</span>
+                <ArrowRight size={14} />
               </button>
+            </form>
+
+            {/* Live Autocomplete / Instant Dropdown for Immediate Redirection */}
+            {showLiveDropdown && searchQuery.trim().length >= 2 && filteredDestinations.length > 0 && (
+              <div className="dest-search-live-dropdown shadow-2xl animate-fade-in">
+                <div className="dest-dropdown-header">
+                  <span>Matching Destinations for &ldquo;{searchQuery}&rdquo;:</span>
+                  <span className="dest-dropdown-hint">Click to view blueprints</span>
+                </div>
+                <div className="dest-dropdown-list">
+                  {filteredDestinations.slice(0, 5).map(item => (
+                    <div 
+                      key={item.id}
+                      className="dest-dropdown-item"
+                      onClick={() => handleDropdownSelect(item.name, true)}
+                    >
+                      <div className="dest-dropdown-item-left">
+                        <img 
+                          src={item.coverImage} 
+                          alt={item.name} 
+                          className="dest-drop-thumb"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=120&q=80';
+                          }}
+                        />
+                        <div className="dest-drop-info">
+                          <div className="dest-drop-title-row">
+                            <span className="dest-drop-name">{item.name}</span>
+                            {item.matchedCity && item.matchedCity.toLowerCase() !== item.name.toLowerCase() && (
+                              <span className="dest-drop-city-pill">
+                                Covers <strong>{item.matchedCity}</strong>
+                              </span>
+                            )}
+                          </div>
+                          <span className="dest-drop-meta">{item.country} • {item.itineraryCount} {item.itineraryCount === 1 ? 'Package' : 'Packages'}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="dest-drop-redirect-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDropdownSelect(item.name, true);
+                        }}
+                      >
+                        <span>View Blueprints</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+          </div>
+
+          {/* Quick Clickable Popular City Suggestion Chips */}
+          <div className="dest-city-chips-container">
+            <div className="dest-city-chips-label">
+              <MapPin size={13} className="text-amber-400 shrink-0" />
+              <span>Popular Cities:</span>
+            </div>
+            <div className="dest-city-chips-scroll">
+              {POPULAR_SEARCH_CITIES.map(city => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => handleSelectCityChip(city)}
+                  className={`dest-city-chip-btn ${searchQuery.toLowerCase().trim() === city.toLowerCase() ? 'active' : ''}`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Key Trust Stats Strip */}
@@ -472,28 +697,94 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
       </section>
 
       {/* ─── 4. DESTINATIONS GRID ─── */}
-      <main className="dest-grid-section">
+      <main id="dest-grid-section" className="dest-grid-section">
         <div className="dest-page-container">
           <div className="dest-grid-header">
-            <h2 className="dest-grid-title">
-              {regionFilter === 'Domestic' ? 'Domestic Destinations in India' : 
-               regionFilter === 'International' ? 'International Holiday Destinations' : 
-               'All Verified Destinations'}
-            </h2>
+            <div>
+              <h2 className="dest-grid-title">
+                {searchQuery.trim() ? (
+                  <span>Destinations Matching City / Keyword &ldquo;<strong className="text-blue-600">{searchQuery}</strong>&rdquo;</span>
+                ) : regionFilter === 'Domestic' ? (
+                  'Domestic Destinations in India'
+                ) : regionFilter === 'International' ? (
+                  'International Holiday Destinations'
+                ) : (
+                  'All Verified Destinations'
+                )}
+              </h2>
+              {searchQuery.trim() && (
+                <div className="dest-active-search-sub">
+                  <span>Found {filteredDestinations.length} destination{filteredDestinations.length === 1 ? '' : 's'} matching &ldquo;{searchQuery}&rdquo;</span>
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="dest-clear-search-chip"
+                    title="Clear search"
+                  >
+                    Clear Filter ×
+                  </button>
+                </div>
+              )}
+            </div>
             <span className="dest-grid-count">
               Showing <strong>{filteredDestinations.length}</strong> {filteredDestinations.length === 1 ? 'destination' : 'destinations'}
             </span>
           </div>
+
+          {/* Quick City Match Redirect Banner */}
+          {searchQuery.trim() && filteredDestinations.length > 0 && (
+            <div className="dest-search-redirect-banner">
+              <div className="dest-search-redirect-left">
+                <div className="dest-search-redirect-pin">
+                  <MapPin size={22} className="text-blue-600" />
+                </div>
+                <div>
+                  <div className="dest-search-redirect-heading">
+                    <span>Showing destination covering</span>
+                    <span className="dest-highlight-text">&ldquo;{searchQuery}&rdquo;</span>
+                    <span>: <strong>{filteredDestinations[0].name}</strong> ({filteredDestinations[0].country})</span>
+                  </div>
+                  <p className="dest-search-redirect-sub">
+                    {filteredDestinations[0].itineraryCount} verified {filteredDestinations[0].itineraryCount === 1 ? 'blueprint' : 'blueprints'} available{filteredDestinations[0].matchedCity ? ` covering ${filteredDestinations[0].matchedCity}` : ''}. Click to view all packages directly.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectDestination(filteredDestinations[0].name)}
+                className="dest-search-redirect-btn"
+                title={`Open ${filteredDestinations[0].name} packages`}
+              >
+                <span>View {filteredDestinations[0].name} Packages</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
 
           {filteredDestinations.length === 0 ? (
             <div className="dest-empty-state">
               <div className="dest-empty-icon">
                 <Search size={32} />
               </div>
-              <h3 className="dest-empty-title">No Destinations Match Your Filter</h3>
+              <h3 className="dest-empty-title">
+                {searchQuery ? `No Destinations Found for "${searchQuery}"` : 'No Destinations Match Your Filter'}
+              </h3>
               <p className="dest-empty-desc">
-                We couldn't find any destinations matching "{searchQuery || vibeFilter}". Try searching with a different keyword or reset filters to browse all our handcrafted places.
+                {searchQuery
+                  ? `We couldn't find a direct destination or city matching "${searchQuery}". Try clicking one of our popular cities below or browse all destinations.`
+                  : 'Try selecting a different style or resetting your filters to explore all handcrafted itineraries.'}
               </p>
+              <div className="dest-empty-city-suggestions">
+                {['Paris', 'Zurich', 'Gulmarg', 'Phuket', 'Seminyak', 'Munnar', 'Jaipur', 'Calangute', 'Tokyo', 'Rome'].map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleSelectCityChip(c)}
+                    className="dest-empty-city-pill"
+                  >
+                    📍 {c}
+                  </button>
+                ))}
+              </div>
               <button 
                 onClick={() => {
                   setSearchQuery('');
@@ -513,7 +804,13 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                 return (
                   <article 
                     key={dest.id}
-                    className="dest-card-premium shadow-sm hover:shadow-xl transition-all"
+                    id={`dest-card-${dest.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    data-dest-id={dest.id}
+                    className={`dest-card-premium shadow-sm hover:shadow-xl transition-all ${
+                      highlightedDestId === dest.name.toLowerCase().replace(/\s+/g, '-') || highlightedDestId === dest.id 
+                        ? 'dest-card-highlighted' 
+                        : ''
+                    }`}
                     onClick={() => onSelectDestination(dest.name)}
                     tabIndex={0}
                     role="button"
@@ -541,6 +838,14 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                       <span className={`dest-card-region-badge ${dest.region.toLowerCase()}`}>
                         {dest.region === 'Domestic' ? '🇮🇳 India' : '🌍 International'}
                       </span>
+
+                      {/* Matched City Badge if user searched a city */}
+                      {dest.matchedCity && dest.matchedCity.toLowerCase() !== dest.name.toLowerCase() && (
+                        <span className="dest-card-matched-city-badge">
+                          <MapPin size={11} className="text-emerald-300 shrink-0" />
+                          <span>Includes <strong>{dest.matchedCity}</strong></span>
+                        </span>
+                      )}
 
                       {/* Duration Tag */}
                       <span className="dest-card-duration-badge">
@@ -577,6 +882,27 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                           <span className="dest-card-price-val">₹{dest.startingPrice}</span>
                         </div>
                       </div>
+
+                      {/* Covered Cities & Spots Strip */}
+                      {dest.cities && dest.cities.length > 0 && (
+                        <div className="dest-card-cities-strip">
+                          <MapPin size={12} className="text-blue-500 shrink-0 mt-0.5" />
+                          <div className="dest-card-cities-inner">
+                            <span className="dest-card-cities-title">Cities & Spots: </span>
+                            <span className="dest-card-cities-text">
+                              {dest.cities.slice(0, 4).map((c, idx) => {
+                                const isMatched = searchQuery.trim() && c.toLowerCase().includes(searchQuery.toLowerCase().trim());
+                                return (
+                                  <span key={c} className={isMatched ? 'dest-city-highlight' : ''}>
+                                    {c}{idx < Math.min(dest.cities.length - 1, 3) ? ', ' : ''}
+                                  </span>
+                                );
+                              })}
+                              {dest.cities.length > 4 ? ` +${dest.cities.length - 4} more` : ''}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       <p className="dest-card-desc">
                         {dest.description}

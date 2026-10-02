@@ -1,8 +1,10 @@
 import type { OrderRecord } from '../types';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL 
-  ? `${(import.meta as any).env.VITE_API_URL.replace(/\/$/, '')}/api` 
-  : 'http://localhost:5000/api';
+export const API_BASE_ORIGIN = (import.meta as any).env?.VITE_API_URL 
+  ? (import.meta as any).env.VITE_API_URL.replace(/\/$/, '') 
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:5000');
+
+export const API_BASE_URL = `${API_BASE_ORIGIN}/api`;
 
 export interface RealtimeStats {
   totalOrders: number;
@@ -304,6 +306,75 @@ export async function uploadDocumentToBackend(file: File): Promise<{
 }
 
 /**
+ * Upload Image from PC to Backend File Storage
+ * Returns full URL accessible across client components.
+ */
+export async function uploadImageToBackend(file: File): Promise<{
+  success: boolean;
+  url: string;
+  fullUrl: string;
+  fileName: string;
+  originalName: string;
+  size: number;
+} | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const fileBase64 = reader.result as string;
+        const res = await fetch(`${API_BASE_URL}/upload-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileBase64,
+            mimeType: file.type || 'image/jpeg'
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const cleanUrl = data.url?.startsWith('http') 
+            ? data.url 
+            : `${API_BASE_ORIGIN}${data.url}`;
+          resolve({
+            success: true,
+            url: cleanUrl,
+            fullUrl: data.fullUrl || cleanUrl,
+            fileName: data.fileName || file.name,
+            originalName: file.name,
+            size: data.size || file.size
+          });
+          return;
+        }
+        // Fallback to data URL if server upload endpoint failed
+        resolve({
+          success: true,
+          url: fileBase64,
+          fullUrl: fileBase64,
+          fileName: file.name,
+          originalName: file.name,
+          size: file.size
+        });
+      } catch (err) {
+        console.warn('Image upload server error, falling back to data URL:', err);
+        // Resilient fallback to local base64 URL
+        const fileBase64 = reader.result as string;
+        resolve({
+          success: true,
+          url: fileBase64,
+          fullUrl: fileBase64,
+          fileName: file.name,
+          originalName: file.name,
+          size: file.size
+        });
+      }
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * Register Agent in Real-Time Database with full onboarding profile
  */
 export async function registerAgentInBackend(agentData: {
@@ -533,6 +604,23 @@ export async function createItineraryInBackend(itineraryData: any) {
 }
 
 /**
+ * Update an existing itinerary blueprint directly in MySQL
+ */
+export async function updateItineraryInBackend(id: string, itineraryData: any) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/itineraries/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itineraryData)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Error updating itinerary:', err);
+    return null;
+  }
+}
+
+/**
  * Delete itinerary blueprint directly from MySQL
  */
 export async function deleteItineraryFromBackend(id: string) {
@@ -543,6 +631,19 @@ export async function deleteItineraryFromBackend(id: string) {
     return await res.json();
   } catch (err) {
     console.warn('Error deleting itinerary:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch verified travel agent profile by email or GST
+ */
+export async function fetchAgentProfile(emailOrGst: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/agent/profile?email=${encodeURIComponent(emailOrGst)}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Error fetching agent profile:', err);
     return null;
   }
 }

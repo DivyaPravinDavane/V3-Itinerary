@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, TrendingUp, Users, MapPin, DollarSign, 
+  X, TrendingUp, Users, MapPin, IndianRupee, 
   CheckCircle2, Eye, Star, Search, 
   Settings, BadgeCheck, FileText, Building2, RefreshCw, Database, Activity, Mail
 } from 'lucide-react';
@@ -11,7 +11,9 @@ import {
   fetchRealtimeStats, 
   fetchRealtimeActivities,
   updateItineraryFeaturedStatus,
-  createItineraryInBackend
+  createItineraryInBackend,
+  API_BASE_URL,
+  API_BASE_ORIGIN
 } from '../utils/api';
 
 interface AdminDashboardModalProps {
@@ -104,12 +106,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
   const handleApproveAgent = async (id: string, name: string) => {
     try {
-      await fetch(`http://localhost:5000/api/agents/${id}/status`, {
+      await fetch(`${API_BASE_URL}/agents/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'VERIFIED' })
       });
-      showNotice(`✅ Agent Verified in Database: ${name} is now authorized to publish blueprints!`);
+      showNotice(`✅ Agent Verified in Database: ${name} is now authorized to publish itineraries!`);
       loadRealtimeData();
     } catch (e) {
       showNotice(`✅ Agent ${name} verified.`);
@@ -118,7 +120,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
   const handleRejectAgent = async (id: string, name: string) => {
     try {
-      await fetch(`http://localhost:5000/api/agents/${id}/status`, {
+      await fetch(`${API_BASE_URL}/agents/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED' })
@@ -133,7 +135,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const handleToggleFeatured = async (id: string, title: string) => {
     const next = !featuredMap[id];
     setFeaturedMap(prev => ({ ...prev, [id]: next }));
-    showNotice(next ? `🌟 Marked "${title.substring(0, 24)}..." as Featured in MySQL` : `Removed from Featured in MySQL`);
+    showNotice(next ? `🌟 Marked "${title.substring(0, 24)}..." as Featured` : `Removed from Featured`);
     try {
       await updateItineraryFeaturedStatus(id, next);
     } catch (e) {
@@ -176,7 +178,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               title="Refresh Real-Time Database"
             >
               <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-              <span>Sync DB ({lastSyncTime})</span>
+              <span>Sync ({lastSyncTime})</span>
             </button>
             <div className="system-health-pill flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -226,7 +228,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             className={`admin-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
             onClick={() => setActiveTab('ledger')}
           >
-            <DollarSign size={16} />
+            <IndianRupee size={16} />
             <span>Live Transactions ({displayOrders.length})</span>
           </button>
           <button 
@@ -247,7 +249,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="kpi-cards-grid">
                 <div className="kpi-card">
                   <div className="kpi-icon-wrap bg-blue-50 text-blue-600">
-                    <DollarSign size={24} />
+                    <IndianRupee size={24} />
                   </div>
                   <div className="kpi-data">
                     <p className="kpi-label">Gross Platform Revenue</p>
@@ -261,7 +263,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <FileText size={24} />
                   </div>
                   <div className="kpi-data">
-                    <p className="kpi-label">Blueprints Downloaded</p>
+                    <p className="kpi-label">Itineraries Downloaded</p>
                     <h3 className="kpi-value">{(realtimeStats?.totalOrders || 0) + 3668}</h3>
                     <p className="kpi-trend text-slate-500">₹99 flat access fee</p>
                   </div>
@@ -416,13 +418,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="pane-stats-count">
-                    Showing {filteredItineraries.length} of {allItineraries.length} Blueprints
+                    Showing {filteredItineraries.length} of {allItineraries.length} Itineraries
                   </div>
                   <button 
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all"
                     onClick={() => setShowAddBlueprintModal(true)}
                   >
-                    <span>+ Add Blueprint to MySQL</span>
+                    <span>+ Add Itinerary</span>
                   </button>
                 </div>
               </div>
@@ -530,7 +532,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         <div className="detail-line">
                           <span className="lbl">Business Proof:</span>
                           <a 
-                            href={`http://localhost:5000${agent.business_proof_url}`} 
+                            href={`${API_BASE_ORIGIN}${agent.business_proof_url}`} 
                             target="_blank" 
                             rel="noreferrer" 
                             className="text-xs text-blue-600 hover:underline font-semibold flex items-center gap-1"
@@ -671,14 +673,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 </div>
 
                 <div className="form-field">
-                  <label className="input-lbl">Standard Blueprint Access Price (INR)</label>
+                  <label className="input-lbl">Standard Itinerary Access Price (INR)</label>
                   <input type="number" defaultValue={99} className="dash-input font-semibold" />
                   <p className="text-xs text-slate-500 mt-1">Nominal barrier price that keeps quality high and builds trust.</p>
                 </div>
 
                 <div className="form-field">
                   <label className="input-lbl">Server-Sent Events (SSE) Stream Endpoint</label>
-                  <input type="text" readOnly value="http://localhost:5000/api/realtime/stream" className="dash-input font-mono text-xs bg-slate-100" />
+                  <input type="text" readOnly value={`${API_BASE_URL}/realtime/stream`} className="dash-input font-mono text-xs bg-slate-100" />
                 </div>
 
                 <button 
@@ -696,7 +698,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
               <div className="flex justify-between items-center border-b pb-3">
-                <h3 className="text-lg font-bold text-slate-800">Add New Blueprint to MySQL</h3>
+                <h3 className="text-lg font-bold text-slate-800">Add New Itinerary</h3>
                 <button 
                   onClick={() => setShowAddBlueprintModal(false)}
                   className="text-slate-400 hover:text-slate-700 p-1"
@@ -706,7 +708,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               </div>
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 block mb-1">Blueprint Title *</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Itinerary Title *</label>
                   <input 
                     type="text" 
                     placeholder="e.g. 5-Day Heritage Rajasthan Odyssey" 
@@ -797,7 +799,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       id: `itin_${Date.now()}`
                     });
                     if (res && res.success) {
-                      showNotice(`✅ Blueprint "${newBlueprint.title}" created & synced to MySQL phpMyAdmin!`);
+                      showNotice(`✅ Itinerary "${newBlueprint.title}" created & synced!`);
                       setShowAddBlueprintModal(false);
                       setNewBlueprint({
                         title: '',
@@ -812,11 +814,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       });
                       loadRealtimeData();
                     } else {
-                      showNotice('Failed to save blueprint.');
+                      showNotice('Failed to save itinerary.');
                     }
                   }}
                 >
-                  Save to MySQL
+                  Save Itinerary
                 </button>
               </div>
             </div>
