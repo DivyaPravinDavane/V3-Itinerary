@@ -3,7 +3,7 @@ import {
   X, Briefcase, Plus, Trash2, Edit3, Eye, Search, 
   CheckCircle2, ShieldCheck, MapPin, Clock, 
   IndianRupee, FileText, MessageSquare, 
-  RefreshCw, Sparkles, Building, Check, ArrowLeft
+  RefreshCw, Sparkles, Building, Check, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import type { Itinerary, UserProfile, ItineraryDay, HotelRecommendation } from '../types';
 import { 
@@ -59,6 +59,19 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   // Delete Confirmation State
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Created & Published Success Modal State (Green Tick Celebration)
+  const [createdSuccessItinerary, setCreatedSuccessItinerary] = useState<{
+    id: string;
+    title: string;
+    destination: string;
+    country: string;
+    durationDays: number;
+    durationNights: number;
+    totalAccessPrice: number;
+  } | null>(null);
+  const [isPublishedTick, setIsPublishedTick] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Agency info resolution
   const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'Verified Travel Agency';
@@ -331,9 +344,12 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   const handleCreateBlueprint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.destination.trim()) {
-      alert('Please provide at least an itinerary title and destination.');
+      setFormError('Please enter both an Itinerary Title and Destination before publishing.');
+      const errEl = document.getElementById('create-itinerary-header');
+      if (errEl) errEl.scrollIntoView({ behavior: 'smooth' });
       return;
     }
+    setFormError(null);
 
     setIsSubmitting(true);
     const itinId = `itin_${Date.now()}`;
@@ -393,9 +409,19 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
     try {
       const res = await createItineraryInBackend(newBlueprint);
       if (res && res.success) {
-        showNotice(`🎉 Itinerary "${formData.title}" published live! It is now visible to customers.`);
+        setIsPublishedTick(true);
+        setCreatedSuccessItinerary({
+          id: itinId,
+          title: formData.title.trim(),
+          destination: formData.destination.trim(),
+          country: formData.country.trim(),
+          durationDays: Number(formData.durationDays),
+          durationNights: Number(formData.durationNights),
+          totalAccessPrice: 99
+        });
+        showNotice(`✅ Itinerary "${formData.title}" created & published live!`);
         await onDataRefresh();
-        setActiveTab('itineraries');
+        
         // Reset form
         setFormData(prev => ({
           ...prev,
@@ -404,10 +430,12 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
           overview: ''
         }));
       } else {
-        showNotice('Failed to publish itinerary. Please check server connection.');
+        setFormError('Failed to publish itinerary. Please check server connection.');
+        showNotice('Failed to publish itinerary.');
       }
     } catch (err: any) {
       console.error('Error publishing itinerary:', err);
+      setFormError('Error saving itinerary: ' + err.message);
       showNotice('Error saving itinerary: ' + err.message);
     } finally {
       setIsSubmitting(false);
@@ -1041,6 +1069,14 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 </div>
               </div>
 
+              {/* Form Validation Error Alert */}
+              {formError && (
+                <div className="create-form-error-banner animate-shake mt-4">
+                  <AlertCircle size={18} className="shrink-0 text-red-600" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               {/* Publishing Banner */}
               <div className="agent-publish-box mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div className="flex items-center gap-3">
@@ -1055,13 +1091,18 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 
                 <button 
                   type="submit" 
-                  disabled={isSubmitting}
-                  className="btn-agent-solid shrink-0 px-6 py-2.5"
+                  disabled={isSubmitting || isPublishedTick}
+                  className={`btn-agent-solid shrink-0 px-6 py-2.5 ${isPublishedTick ? 'published-success-btn' : ''}`}
                 >
                   {isSubmitting ? (
                     <>
                       <RefreshCw size={15} className="animate-spin" />
                       <span>Publishing itinerary...</span>
+                    </>
+                  ) : isPublishedTick ? (
+                    <>
+                      <CheckCircle2 size={18} className="animate-bounce text-white" />
+                      <span>✓ Itinerary Created!</span>
                     </>
                   ) : (
                     <>
@@ -1516,6 +1557,64 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
             </div>
           );
         })()}
+
+        {/* CELEBRATORY SUCCESS MODAL: ITINERARY CREATED WITH GREEN TICK */}
+        {createdSuccessItinerary && (
+          <div className="publish-success-backdrop" onClick={() => setCreatedSuccessItinerary(null)}>
+            <div className="publish-success-card" onClick={(e) => e.stopPropagation()}>
+              <div className="publish-tick-circle">
+                <Check size={44} strokeWidth={3.5} />
+              </div>
+
+              <h3 className="publish-success-title">Itinerary Created!</h3>
+              <p className="publish-success-sub">
+                Your travel itinerary has been published live and synchronized with the customer marketplace. Travelers can now discover and unlock it!
+              </p>
+
+              <div className="publish-itinerary-preview-badge">
+                <div className="publish-preview-title">{createdSuccessItinerary.title}</div>
+                <div className="publish-preview-meta">
+                  <span>📍 {createdSuccessItinerary.destination}, {createdSuccessItinerary.country}</span>
+                  <span>⏱ {createdSuccessItinerary.durationDays}D / {createdSuccessItinerary.durationNights}N</span>
+                  <span className="publish-preview-pill">
+                    <Check size={12} strokeWidth={3} />
+                    <span>Live on Portal (₹99)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="publish-success-actions">
+                <button 
+                  type="button"
+                  className="btn-publish-view"
+                  onClick={() => {
+                    setCreatedSuccessItinerary(null);
+                    setIsPublishedTick(false);
+                    setActiveTab('itineraries');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <Eye size={16} />
+                  <span>View My Itineraries</span>
+                </button>
+
+                <button 
+                  type="button"
+                  className="btn-publish-create-another"
+                  onClick={() => {
+                    setCreatedSuccessItinerary(null);
+                    setIsPublishedTick(false);
+                    setActiveTab('create');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>Create Another</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   };
