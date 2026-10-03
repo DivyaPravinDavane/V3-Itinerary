@@ -551,12 +551,13 @@ export async function deleteItinerary(id) {
   }
 }
 
-export async function getCreatedItinerariesByTravelAgents(agentEmailOrGst = '') {
+export async function getCreatedItinerariesByTravelAgents(agentIdentifier = '') {
   try {
-    if (agentEmailOrGst) {
+    if (agentIdentifier) {
+      const clean = agentIdentifier.trim().toLowerCase();
       const [rows] = await mysqlPool.query(
-        'SELECT * FROM created_itineraries_by_travel_agents WHERE LOWER(agent_email) = LOWER(?) OR LOWER(agent_gst) = LOWER(?) ORDER BY created_at DESC',
-        [agentEmailOrGst, agentEmailOrGst]
+        'SELECT * FROM created_itineraries_by_travel_agents WHERE LOWER(agent_email) = ? OR LOWER(agent_gst) = ? OR id = ? ORDER BY created_at DESC',
+        [clean, clean, agentIdentifier.trim()]
       );
       return rows;
     }

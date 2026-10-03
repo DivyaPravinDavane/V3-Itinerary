@@ -507,7 +507,23 @@ app.post('/api/send-pdf-email', async (req, res) => {
 // ─── 12. Get All Itineraries (MySQL) ──────────────────────────────────────────
 app.get('/api/itineraries', async (req, res) => {
   try {
-    const itineraries = await getAllItineraries();
+    const { agent_email, agent_id, agent_gst } = req.query;
+    let itineraries = await getAllItineraries();
+    if (agent_email || agent_id || agent_gst) {
+      const cleanEmail = (agent_email || '').trim().toLowerCase();
+      const cleanId = (agent_id || '').trim().toLowerCase();
+      const cleanGst = (agent_gst || '').trim().toUpperCase();
+      itineraries = itineraries.filter(it => {
+        const ag = it.agent || {};
+        const itEmail = String(ag.email || it.agent_email || '').trim().toLowerCase();
+        const itId = String(ag.id || it.agent_id || '').trim().toLowerCase();
+        const itGst = String(ag.gstNumber || ag.gst_number || it.agent_gst || '').trim().toUpperCase();
+        if (cleanEmail && itEmail && cleanEmail === itEmail) return true;
+        if (cleanId && itId && cleanId === itId) return true;
+        if (cleanGst && itGst && cleanGst.length >= 15 && cleanGst === itGst && !cleanGst.includes('0000A1Z5')) return true;
+        return false;
+      });
+    }
     res.json({ success: true, count: itineraries.length, itineraries });
   } catch (error) {
     console.error('Error fetching itineraries from MySQL:', error);
@@ -574,8 +590,8 @@ app.delete(['/api/itineraries/:id', '/api/itineraries'], async (req, res) => {
 // ─── 13b. Agent Created Itineraries (phpMyAdmin Table) ───────────────────────
 app.get('/api/agent-created-itineraries', async (req, res) => {
   try {
-    const { email, gst } = req.query;
-    const itineraries = await getCreatedItinerariesByTravelAgents(email || gst || '');
+    const { email, gst, agent_id } = req.query;
+    const itineraries = await getCreatedItinerariesByTravelAgents(email || gst || agent_id || '');
     res.json({ success: true, count: itineraries.length, itineraries });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch agent created itineraries', details: error.message });

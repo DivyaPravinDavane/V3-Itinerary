@@ -645,7 +645,19 @@ export function App() {
         onOpenAuth={handleOpenAuth}
         onLogout={() => {
           localStorage.removeItem('v3_auth_active');
-          setUser(prev => ({ ...prev, isLoggedIn: false }));
+          localStorage.removeItem('v3_user_profile');
+          setUser({
+            fullName: '',
+            email: '',
+            mobile: '',
+            isLoggedIn: false,
+            role: 'customer',
+            agentDetails: undefined,
+            preferredTravelType: 'Couple',
+            preferredBudgetTier: 'Comfort',
+            savedItineraryIds: [],
+            purchasedOrders: []
+          });
           showToast('Signed out successfully');
         }}
         onOpenDashboard={(tab) => {
@@ -898,18 +910,27 @@ export function App() {
         }}
         onLoginSuccess={(profile) => {
           localStorage.setItem('v3_auth_active', 'true');
-          setUser(prev => ({
-            ...prev,
-            ...profile,
-            isLoggedIn: true
-          }));
+          const cleanUser: UserProfile = {
+            fullName: profile.fullName || '',
+            email: profile.email || '',
+            mobile: profile.mobile || '',
+            isLoggedIn: true,
+            role: profile.role || 'customer',
+            agentDetails: profile.agentDetails ? { ...profile.agentDetails } : undefined,
+            preferredTravelType: profile.preferredTravelType || 'Couple',
+            preferredBudgetTier: profile.preferredBudgetTier || 'Comfort',
+            savedItineraryIds: profile.savedItineraryIds || [],
+            purchasedOrders: profile.purchasedOrders || []
+          };
+          setUser(cleanUser);
+          localStorage.setItem('v3_user_profile', JSON.stringify(cleanUser));
           if (profile.role === 'admin') {
             showToast('🛡️ Signed in as V3 Platform Administrator');
           } else if (profile.role === 'agent') {
             showToast(`💼 Welcome to Travel Agent Studio, ${profile.agentDetails?.agencyName || profile.fullName}!`);
             handleNavigatePage('agent-studio');
           } else {
-            showToast(`Welcome back, ${profile.fullName || user.fullName}!`);
+            showToast(`Welcome back, ${profile.fullName || 'Traveler'}!`);
           }
         }}
       />

@@ -83,7 +83,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   const agentCity = user.agentDetails?.city || 'Mumbai';
   const agentState = user.agentDetails?.state || 'Maharashtra';
 
-  // Identify if an itinerary is owned/created by THIS specific logged-in agent (Strict Isolation)
+  // Identify if an itinerary is owned/created by THIS specific logged-in agent (Strict Dynamic Isolation)
   const isAgentOwnedItinerary = (it: Itinerary) => {
     if (!it) return false;
     const itAgent = it.agent;
@@ -91,43 +91,28 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 
     // 1. Agent ID match (exact, non-empty, case-insensitive)
     const myAgentId = String(user.agentDetails?.id || '').trim().toLowerCase();
-    const itAgentId = String(itAgent.id || '').trim().toLowerCase();
+    const itAgentId = String(itAgent.id || (it as any).agent_id || '').trim().toLowerCase();
     if (myAgentId && itAgentId && myAgentId === itAgentId) {
       return true;
     }
 
-    // 2. Email match (exact, non-empty, case-insensitive)
+    // 2. Email match (exact registered agency email, non-empty, case-insensitive)
     const myEmail = String(user.agentDetails?.email || user.email || '').trim().toLowerCase();
-    const itEmail = String(itAgent.email || '').trim().toLowerCase();
+    const itEmail = String(itAgent.email || (it as any).agent_email || '').trim().toLowerCase();
     if (myEmail && itEmail && myEmail === itEmail) {
       return true;
     }
 
-    // 3. GST Number match (exact, non-empty, case-insensitive, ignore dummy placeholder)
+    // 3. GST Number match (exact 15-char GSTIN, case-insensitive, ignore dummy placeholder)
     const myGst = String(user.agentDetails?.gstNumber || user.agentDetails?.gst_number || '').trim().toUpperCase();
-    const itGst = String(itAgent.gstNumber || '').trim().toUpperCase();
-    if (myGst && itGst && myGst === itGst && myGst.length >= 10 && !myGst.includes('0000A1Z5')) {
+    const itGst = String(itAgent.gstNumber || (it as any).agent_gst || '').trim().toUpperCase();
+    if (myGst && itGst && myGst.length >= 15 && myGst === itGst && !myGst.includes('0000A1Z5')) {
       return true;
     }
 
-    // 4. Exact Agency Name match (strict equality only, no substrings, ignore generic fallbacks)
-    const myAgency = String(user.agentDetails?.agencyName || user.agentDetails?.agency_name || '').trim().toLowerCase();
-    const itAgency = String(itAgent.agencyName || '').trim().toLowerCase();
-    const genericAgencies = new Set([
-      '', 'verified travel agency', 'partner agency', 'v3 curators', 'verified partner agency', 'my agency'
-    ]);
-    if (myAgency && itAgency && myAgency === itAgency && !genericAgencies.has(myAgency)) {
-      return true;
-    }
-
-    // 5. Phone match (exact 10 digits only, ignore dummy numbers)
-    const myPhone = String(user.agentDetails?.phone || user.mobile || '').replace(/[^0-9]/g, '').slice(-10);
-    const itPhone = String(itAgent.phone || '').replace(/[^0-9]/g, '').slice(-10);
-    const dummyPhones = new Set(['', '9833445566', '9820389694', '9876543210']);
-    if (myPhone && itPhone && myPhone.length === 10 && myPhone === itPhone && !dummyPhones.has(myPhone)) {
-      return true;
-    }
-
+    // Strict Security Isolation: Phone numbers and agency names are NEVER matched.
+    // This prevents any new agent account from inheriting itineraries from other agents
+    // who may share similar agency titles or test phone numbers.
     return false;
   };
 
@@ -153,24 +138,17 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
       return true;
     }
 
-    // Check if the order has explicit agent details matching this agent
+    // Check if the order has explicit agent email matching this agent
     const oAgentEmail = String(o.agent_email || o.agentEmail || '').toLowerCase().trim();
     const myEmail = String(user.agentDetails?.email || user.email || '').toLowerCase().trim();
     if (oAgentEmail && myEmail && oAgentEmail === myEmail) {
       return true;
     }
 
-    const oAgentName = String(o.agent_name || o.agentName || '').toLowerCase().trim();
-    const myAgency = String(user.agentDetails?.agencyName || user.agentDetails?.agency_name || '').toLowerCase().trim();
-    const genericAgencies = new Set(['', 'verified travel agency', 'partner agency', 'v3 curators', 'verified partner agency', 'my agency']);
-    if (oAgentName && myAgency && oAgentName === myAgency && !genericAgencies.has(myAgency)) {
-      return true;
-    }
-
-    const oAgentPhone = String(o.agent_phone || o.agentPhone || '').replace(/[^0-9]/g, '').slice(-10);
-    const myPhone = String(user.agentDetails?.phone || user.mobile || '').replace(/[^0-9]/g, '').slice(-10);
-    const dummyPhones = new Set(['', '9833445566', '9820389694', '9876543210']);
-    if (oAgentPhone && myPhone && myPhone.length === 10 && oAgentPhone === myPhone && !dummyPhones.has(myPhone)) {
+    // Check if the order has explicit agent GST matching this agent
+    const oAgentGst = String(o.agent_gst || o.agentGst || '').toUpperCase().trim();
+    const myGst = String(user.agentDetails?.gstNumber || user.agentDetails?.gst_number || '').toUpperCase().trim();
+    if (oAgentGst && myGst && myGst.length >= 15 && oAgentGst === myGst && !myGst.includes('0000A1Z5')) {
       return true;
     }
 
