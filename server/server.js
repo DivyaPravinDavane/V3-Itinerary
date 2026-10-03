@@ -28,6 +28,7 @@ import {
   getPopularDestinations,
   getItineraryCount,
   insertItinerary,
+  getCreatedItinerariesByTravelAgents,
   updateItineraryPopular,
   deleteItinerary,
   getAllDestinations,
@@ -563,6 +564,31 @@ app.delete('/api/itineraries/:id', async (req, res) => {
     res.json({ success: true, message: 'Blueprint removed from MySQL', result });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete itinerary', details: error.message });
+  }
+});
+
+// ─── 13b. Agent Created Itineraries (phpMyAdmin Table) ───────────────────────
+app.get('/api/agent-created-itineraries', async (req, res) => {
+  try {
+    const { email, gst } = req.query;
+    const itineraries = await getCreatedItinerariesByTravelAgents(email || gst || '');
+    res.json({ success: true, count: itineraries.length, itineraries });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch agent created itineraries', details: error.message });
+  }
+});
+
+app.post('/api/agent-created-itineraries', async (req, res) => {
+  try {
+    const saved = await insertItinerary(req.body);
+    broadcastRealtimeEvent('itinerary_saved', { itinerary: saved });
+    res.status(201).json({ 
+      success: true, 
+      message: 'Itinerary saved & updated in created_itineraries_by_travel_agents (phpMyAdmin)', 
+      itinerary: saved 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save agent created itinerary', details: error.message });
   }
 });
 

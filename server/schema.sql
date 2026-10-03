@@ -72,7 +72,45 @@ CREATE TABLE IF NOT EXISTS itineraries (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Orders & Payments Table (Flat ₹99 Purchases & Razorpay Gateway Transactions)
+-- 3b. Created Itineraries by Travel Agents (Dedicated Agent Blueprints Table for phpMyAdmin)
+CREATE TABLE IF NOT EXISTS created_itineraries_by_travel_agents (
+  id VARCHAR(64) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  destination VARCHAR(100) NOT NULL,
+  country VARCHAR(100) NOT NULL,
+  region VARCHAR(100) DEFAULT 'Domestic',
+  duration_days INT NOT NULL DEFAULT 5,
+  duration_nights INT NOT NULL DEFAULT 4,
+  traveler_type VARCHAR(60) NOT NULL DEFAULT 'Family',
+  total_access_price DECIMAL(10,2) DEFAULT 99.00,
+  estimated_trip_cost DECIMAL(12, 2) NOT NULL DEFAULT 55000.00,
+  agency_name VARCHAR(160) NOT NULL,
+  founder_name VARCHAR(120),
+  agent_gst VARCHAR(50),
+  agent_phone VARCHAR(40),
+  agent_email VARCHAR(160),
+  agent_city VARCHAR(80),
+  agent_state VARCHAR(80),
+  cover_image VARCHAR(512),
+  overview TEXT,
+  best_time_to_visit VARCHAR(120),
+  inclusions_json JSON,
+  exclusions_json JSON,
+  days_json JSON,
+  hotels_json JSON,
+  budget_breakdown_json JSON,
+  status ENUM('PUBLISHED', 'DRAFT', 'ARCHIVED') DEFAULT 'PUBLISHED',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_agent_email (agent_email),
+  KEY idx_agent_gst (agent_gst),
+  KEY idx_destination (destination)
+);
+
+CREATE OR REPLACE VIEW agent_created_itineraries AS 
+SELECT * FROM created_itineraries_by_travel_agents;
+
+-- 4. Orders & Payments Table (Flat ₹99 Purchases & Razorpay Gateway Transactions)
 CREATE TABLE IF NOT EXISTS orders (
   order_id VARCHAR(64) PRIMARY KEY,
   itinerary_id VARCHAR(64) NOT NULL,

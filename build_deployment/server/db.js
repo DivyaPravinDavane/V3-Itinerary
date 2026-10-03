@@ -65,7 +65,7 @@ async function initMysql() {
         full_name VARCHAR(120) NOT NULL,
         email VARCHAR(160) NOT NULL UNIQUE,
         mobile VARCHAR(30),
-        role ENUM('customer', 'admin') DEFAULT 'customer',
+        role ENUM('customer', 'admin', 'agent') DEFAULT 'customer',
         password_hash VARCHAR(255),
         preferred_travel_type VARCHAR(60) DEFAULT 'Family / Leisure',
         preferred_budget_tier VARCHAR(60) DEFAULT 'Standard',
@@ -221,6 +221,49 @@ async function initMysql() {
       console.warn('[Payments Views Setup Note]:', vErr.message);
     }
 
+    // Ensure created_itineraries_by_travel_agents table and view exist for phpMyAdmin
+    try {
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS created_itineraries_by_travel_agents (
+          id VARCHAR(64) PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          destination VARCHAR(100) NOT NULL,
+          country VARCHAR(100) NOT NULL,
+          region VARCHAR(100) DEFAULT 'Domestic',
+          duration_days INT NOT NULL DEFAULT 5,
+          duration_nights INT NOT NULL DEFAULT 4,
+          traveler_type VARCHAR(60) NOT NULL DEFAULT 'Family',
+          total_access_price DECIMAL(10,2) DEFAULT 99.00,
+          estimated_trip_cost DECIMAL(12, 2) NOT NULL DEFAULT 55000.00,
+          agency_name VARCHAR(160) NOT NULL,
+          founder_name VARCHAR(120),
+          agent_gst VARCHAR(50),
+          agent_phone VARCHAR(40),
+          agent_email VARCHAR(160),
+          agent_city VARCHAR(80),
+          agent_state VARCHAR(80),
+          cover_image VARCHAR(512),
+          overview TEXT,
+          best_time_to_visit VARCHAR(120),
+          inclusions_json JSON,
+          exclusions_json JSON,
+          days_json JSON,
+          hotels_json JSON,
+          budget_breakdown_json JSON,
+          status ENUM('PUBLISHED', 'DRAFT', 'ARCHIVED') DEFAULT 'PUBLISHED',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_agent_email (agent_email),
+          KEY idx_agent_gst (agent_gst),
+          KEY idx_destination (destination)
+        );
+      `);
+      await mysqlPool.query(`CREATE OR REPLACE VIEW agent_created_itineraries AS SELECT * FROM created_itineraries_by_travel_agents;`);
+    } catch (tblErr) {
+      console.warn('[created_itineraries_by_travel_agents Setup Note]:', tblErr.message);
+    }
+
+
 
     // Ensure all onboarding columns exist in travel_agents table
     try {
@@ -248,6 +291,13 @@ async function initMysql() {
         if (!colNames.includes(col)) {
           await mysqlPool.query(`ALTER TABLE travel_agents ADD COLUMN ${col} ${type}`);
         }
+      }
+
+      // Ensure users table role ENUM includes 'agent'
+      try {
+        await mysqlPool.query("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'agent') DEFAULT 'customer'");
+      } catch (roleEnumErr) {
+        // Table already updated or compatible
       }
     } catch (migErr) {
       console.warn('[MySQL Migration Note]:', migErr.message);
@@ -378,6 +428,97 @@ export async function insertItinerary(it) {
     JSON.stringify(it.exclusions || [])
   ]);
   await logActivity('ITINERARY_SAVED', `Blueprint saved: ${it.title} (${it.destination})`);
+
+  // Synchronize into created_itineraries_by_travel_agents table for phpMyAdmin
+  try {
+    const agentObj = it.agent || {};
+    const agencyName = agentObj.agencyName || agentObj.agency_name || 'Verified Partner Agency';
+    const founderName = agentObj.founderName || agentObj.founder_name || 'Agency Principal';
+    const agentGst = agentObj.gstNumber || agentObj.gst_number || 'GSTIN27AAAAA0000A1Z5';
+    const agentPhone = agentObj.phone || '';
+    const agentEmail = agentObj.email || '';
+    const agentLoc = agentObj.location || '';
+    const locParts = agentLoc ? agentLoc.split(',') : [];
+    const agentCity = locParts[0]?.trim() || '';
+    const agentState = locParts[1]?.trim() || '';
+
+    await mysqlPool.query(`
+      INSERT INTO created_itineraries_by_travel_agents (
+        id, title, destination, country, region,
+        duration_days, duration_nights, traveler_type,
+        total_access_price, estimated_trip_cost,
+        agency_name, founder_name, agent_gst, agent_phone, agent_email, agent_city, agent_state,
+        cover_image, overview, best_time_to_visit,
+        inclusions_json, exclusions_json, days_json, hotels_json, budget_breakdown_json,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
+      ON DUPLICATE KEY UPDATE
+        title = VALUES(title),
+        destination = VALUES(destination),
+        country = VALUES(country),
+        region = VALUES(region),
+        duration_days = VALUES(duration_days),
+        duration_nights = VALUES(duration_nights),
+        traveler_type = VALUES(traveler_type),
+        total_access_price = VALUES(total_access_price),
+        estimated_trip_cost = VALUES(estimated_trip_cost),
+        agency_name = VALUES(agency_name),
+        founder_name = VALUES(founder_name),
+        agent_gst = VALUES(agent_gst),
+        agent_phone = VALUES(agent_phone),
+        agent_email = VALUES(agent_email),
+        agent_city = VALUES(agent_city),
+        agent_state = VALUES(agent_state),
+        cover_image = VALUES(cover_image),
+        overview = VALUES(overview),
+        best_time_to_visit = VALUES(best_time_to_visit),
+        inclusions_json = VALUES(inclusions_json),
+        exclusions_json = VALUES(exclusions_json),
+        days_json = VALUES(days_json),
+        hotels_json = VALUES(hotels_json),
+        budget_breakdown_json = VALUES(budget_breakdown_json),
+        status = 'PUBLISHED'
+    `, [
+      itinId, it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
+      it.durationDays || 5, it.durationNights || 4, it.travelerType || 'Family',
+      it.totalAccessPrice || 99, it.estimatedTripCost || 55000,
+      agencyName, founderName, agentGst, agentPhone, agentEmail, agentCity, agentState,
+      it.coverImage || '', it.overview || '', it.bestTimeToVisit || 'Oct - Apr',
+      typeof it.inclusions === 'string' ? it.inclusions : JSON.stringify(it.inclusions || []),
+      typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
+      typeof it.days === 'string' ? it.days : JSON.stringify(it.days || []),
+      typeof it.hotels === 'string' ? it.hotels : JSON.stringify(it.hotels || []),
+      typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {})
+    ]);
+  } catch (agentTableErr) {
+    console.warn('[created_itineraries_by_travel_agents sync note]:', agentTableErr.message);
+  }
+
+  // Synchronize destination table so customer portal reflects it immediately
+  try {
+    const destName = it.destination;
+    if (destName) {
+      const [destRows] = await mysqlPool.query('SELECT id FROM destinations WHERE LOWER(name) = LOWER(?)', [destName]);
+      if (destRows.length === 0) {
+        await saveDestination({
+          name: destName,
+          country: it.country || 'India',
+          region: it.region || 'Domestic',
+          cover_image: it.coverImage || 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&auto=format&fit=crop&q=80',
+          tagline: `Curated verified blueprints for ${destName}`,
+          description: it.overview || `Explore hand-crafted itineraries for ${destName}.`,
+          itinerary_count: 1,
+          starting_price: it.totalAccessPrice || 99
+        });
+      } else {
+        const [cnt] = await mysqlPool.query('SELECT COUNT(*) as cnt FROM itineraries WHERE LOWER(destination) = LOWER(?)', [destName]);
+        await mysqlPool.query('UPDATE destinations SET itinerary_count = ? WHERE id = ?', [cnt[0]?.cnt || 1, destRows[0].id]);
+      }
+    }
+  } catch (dErr) {
+    console.warn('[Destination Sync Note]:', dErr.message);
+  }
+
   return getItineraryById(itinId);
 }
 
@@ -391,9 +532,38 @@ export async function updateItineraryPopular(id, isPopular) {
 }
 
 export async function deleteItinerary(id) {
-  const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ?', [id]);
-  await logActivity('ITINERARY_DELETED', `Deleted itinerary ${id}`);
-  return result;
+  try {
+    const [existing] = await mysqlPool.query('SELECT destination FROM itineraries WHERE id = ?', [id]);
+    const destName = existing[0]?.destination;
+    const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ?', [id]);
+    await mysqlPool.query('DELETE FROM created_itineraries_by_travel_agents WHERE id = ?', [id]).catch(() => {});
+    if (destName) {
+      const [cnt] = await mysqlPool.query('SELECT COUNT(*) as cnt FROM itineraries WHERE LOWER(destination) = LOWER(?)', [destName]);
+      await mysqlPool.query('UPDATE destinations SET itinerary_count = ? WHERE LOWER(name) = LOWER(?)', [cnt[0]?.cnt || 0, destName]);
+    }
+    await logActivity('ITINERARY_DELETED', `Deleted itinerary ${id}`);
+    return result;
+  } catch (err) {
+    console.error('Delete itinerary error:', err);
+    throw err;
+  }
+}
+
+export async function getCreatedItinerariesByTravelAgents(agentEmailOrGst = '') {
+  try {
+    if (agentEmailOrGst) {
+      const [rows] = await mysqlPool.query(
+        'SELECT * FROM created_itineraries_by_travel_agents WHERE LOWER(agent_email) = LOWER(?) OR LOWER(agent_gst) = LOWER(?) ORDER BY created_at DESC',
+        [agentEmailOrGst, agentEmailOrGst]
+      );
+      return rows;
+    }
+    const [rows] = await mysqlPool.query('SELECT * FROM created_itineraries_by_travel_agents ORDER BY created_at DESC');
+    return rows;
+  } catch (err) {
+    console.error('Error fetching created_itineraries_by_travel_agents:', err);
+    return [];
+  }
 }
 
 export async function getItineraryCount() {
@@ -765,6 +935,16 @@ export async function updateAgentStatus(agentId, status) {
   await logActivity('AGENT_STATUS_UPDATE', `Agent ${agentId} status → ${status}`);
 }
 
+export async function getAgentByEmailOrGst(identifier) {
+  if (!identifier) return null;
+  const clean = identifier.trim();
+  const [rows] = await mysqlPool.query(
+    'SELECT * FROM travel_agents WHERE LOWER(email) = LOWER(?) OR UPPER(gst_number) = UPPER(?) OR LOWER(agency_name) = LOWER(?) LIMIT 1',
+    [clean, clean, clean]
+  );
+  return rows[0] || null;
+}
+
 // ─── WISHLIST ─────────────────────────────────────────────────────────────────
 export async function toggleWishlist(userEmail, itineraryId) {
   const [existing] = await mysqlPool.query(
@@ -945,6 +1125,7 @@ export default {
   getPopularDestinations,
   insertItinerary,
   getItineraryCount,
+  getCreatedItinerariesByTravelAgents,
   // Orders & Payments
   insertOrder,
   initiateOrder,
@@ -960,6 +1141,7 @@ export default {
   saveAgent,
   getAgents,
   updateAgentStatus,
+  getAgentByEmailOrGst,
   // Wishlist
   toggleWishlist,
   getWishlist,

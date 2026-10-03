@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..');
 async function generateStructuredDump() {
   await initDatabase();
 
-  const tables = ['users', 'destinations', 'travel_agents', 'itineraries', 'orders', 'saved_itineraries', 'activity_logs'];
+  const tables = ['users', 'destinations', 'travel_agents', 'itineraries', 'created_itineraries_by_travel_agents', 'orders', 'saved_itineraries', 'activity_logs'];
 
   let sql = `-- ==============================================================================
 -- V3ITINERARY COMPLETE MYSQL DATABASE DUMP (STRUCTURE + ALL DATA)
