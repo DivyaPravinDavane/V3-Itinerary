@@ -115,9 +115,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setAgentLoading(true);
     setAgentError(null);
+    const isEmail = cleanId.includes('@');
 
     try {
-      const isEmail = cleanId.includes('@');
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,19 +132,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const data = await res.json();
       const ag = data.agent || {};
 
+      const normalizedKey = cleanId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const uniqueAgentId = ag.id || `ag-${normalizedKey || Date.now().toString(36)}`;
+      const resolvedEmail = ag.email || (isEmail ? cleanId.toLowerCase() : `${normalizedKey || 'agent'}@partner.v3itinerary.com`);
+      const resolvedAgency = ag.agency_name || (cleanId.includes('@') ? cleanId.split('@')[0] : cleanId);
+      const resolvedGst = ag.gst_number || (!isEmail && cleanId.length >= 10 ? cleanId.toUpperCase() : `GSTIN${normalizedKey.slice(0, 10).toUpperCase()}`);
+
       const agentProfile: Partial<UserProfile> = {
-        fullName: ag.founder_name || ag.agency_name || cleanId.split('@')[0],
-        email: ag.email || (isEmail ? cleanId.toLowerCase() : 'agent@v3itinerary.com'),
+        fullName: ag.founder_name || resolvedAgency,
+        email: resolvedEmail,
         mobile: ag.phone || '+91 98334 45566',
         isLoggedIn: true,
         role: 'agent' as const,
         agentDetails: {
-          id: ag.id || `ag-${Date.now().toString().slice(-4)}`,
-          agencyName: ag.agency_name || cleanId,
-          founderName: ag.founder_name || cleanId,
-          gstNumber: ag.gst_number || (!isEmail ? cleanId.toUpperCase() : 'GSTIN27AAAAA0000A1Z5'),
+          id: uniqueAgentId,
+          agencyName: resolvedAgency,
+          founderName: ag.founder_name || resolvedAgency,
+          gstNumber: resolvedGst,
           phone: ag.phone || '+91 98334 45566',
-          email: ag.email || (isEmail ? cleanId.toLowerCase() : 'agent@v3itinerary.com'),
+          email: resolvedEmail,
           whatsapp: ag.whatsapp || ag.phone || '+91 98334 45566',
           city: ag.city || 'Mumbai',
           state: ag.state || 'Maharashtra',
@@ -158,20 +164,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClose();
     } catch (err: any) {
       console.warn('Agent login notice:', err);
-      // Fallback local agent profile for uninterrupted experience
+      // Fallback local agent profile for uninterrupted experience with unique per-agent isolation
+      const normalizedKey = cleanId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const uniqueAgentId = `ag-${normalizedKey || Date.now().toString(36)}`;
+      const fallbackEmail = isEmail ? cleanId.toLowerCase() : `${normalizedKey || 'agent'}@partner.v3itinerary.com`;
+      const fallbackAgency = cleanId.includes('@') ? cleanId.split('@')[0] : cleanId;
+      const fallbackGst = !isEmail && cleanId.length >= 10 ? cleanId.toUpperCase() : `GSTIN${normalizedKey.slice(0, 10).toUpperCase()}`;
+
       const fallbackProfile: Partial<UserProfile> = {
-        fullName: cleanId.split('@')[0] || 'Partner Agency',
-        email: cleanId.includes('@') ? cleanId : 'agent@v3itinerary.com',
+        fullName: fallbackAgency,
+        email: fallbackEmail,
         mobile: '+91 98334 45566',
         isLoggedIn: true,
         role: 'agent' as const,
         agentDetails: {
-          id: 'ag-4380',
-          agencyName: cleanId.includes('@') ? cleanId.split('@')[0] : cleanId,
-          founderName: cleanId.includes('@') ? cleanId.split('@')[0] : cleanId,
-          gstNumber: cleanId.includes('@') ? 'GSTIN27AAAAA0000A1Z5' : cleanId.toUpperCase(),
+          id: uniqueAgentId,
+          agencyName: fallbackAgency,
+          founderName: fallbackAgency,
+          gstNumber: fallbackGst,
           phone: '+91 98334 45566',
-          email: cleanId.includes('@') ? cleanId : 'agent@v3itinerary.com',
+          email: fallbackEmail,
           whatsapp: '+91 98334 45566',
           city: 'Mumbai',
           state: 'Maharashtra',

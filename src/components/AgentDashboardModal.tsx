@@ -40,7 +40,6 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'itineraries' | 'create' | 'orders' | 'profile'>('itineraries');
   const [searchQuery, setSearchQuery] = useState('');
-  const [scopeFilter, setScopeFilter] = useState<'my' | 'all'>('my');
   const [regionFilter, setRegionFilter] = useState<'all' | 'Domestic' | 'International'>('all');
   
   // Real-time notification toast
@@ -75,55 +74,57 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
 
   // Agency info resolution
-  const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'Verified Travel Agency';
+  const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'My Agency';
   const founderName = user.agentDetails?.founderName || user.agentDetails?.founder_name || user.fullName || 'Agency Principal';
-  const gstNumber = user.agentDetails?.gstNumber || user.agentDetails?.gst_number || 'GSTIN27AAAAA0000A1Z5';
-  const agentPhone = user.agentDetails?.phone || user.mobile || '+91 98334 45566';
-  const agentEmail = user.agentDetails?.email || user.email || 'partner@v3itinerary.com';
+  const gstNumber = user.agentDetails?.gstNumber || user.agentDetails?.gst_number || '';
+  const agentPhone = user.agentDetails?.phone || user.mobile || '';
+  const agentEmail = user.agentDetails?.email || user.email || '';
   const agentWhatsapp = user.agentDetails?.whatsapp || agentPhone;
   const agentCity = user.agentDetails?.city || 'Mumbai';
   const agentState = user.agentDetails?.state || 'Maharashtra';
 
-  // Identify if an itinerary is owned/created by THIS specific logged-in agent
+  // Identify if an itinerary is owned/created by THIS specific logged-in agent (Strict Isolation)
   const isAgentOwnedItinerary = (it: Itinerary) => {
     if (!it) return false;
     const itAgent = it.agent;
     if (!itAgent) return false;
 
-    // 1. Agent ID match
-    const myAgentId = user.agentDetails?.id;
-    if (myAgentId && itAgent.id && String(itAgent.id).toLowerCase() === String(myAgentId).toLowerCase()) {
+    // 1. Agent ID match (exact, non-empty, case-insensitive)
+    const myAgentId = String(user.agentDetails?.id || '').trim().toLowerCase();
+    const itAgentId = String(itAgent.id || '').trim().toLowerCase();
+    if (myAgentId && itAgentId && myAgentId === itAgentId) {
       return true;
     }
 
-    // 2. Email match (case-insensitive)
-    const myEmail = (user.agentDetails?.email || user.email || agentEmail || '').toLowerCase().trim();
-    const itEmail = (itAgent.email || '').toLowerCase().trim();
+    // 2. Email match (exact, non-empty, case-insensitive)
+    const myEmail = String(user.agentDetails?.email || user.email || '').trim().toLowerCase();
+    const itEmail = String(itAgent.email || '').trim().toLowerCase();
     if (myEmail && itEmail && myEmail === itEmail) {
       return true;
     }
 
-    // 3. Agency name match
-    const myAgency = (user.agentDetails?.agencyName || user.agentDetails?.agency_name || agencyName || '').toLowerCase().trim();
-    const itAgency = (itAgent.agencyName || '').toLowerCase().trim();
-    if (myAgency && itAgency) {
-      if (myAgency === itAgency) return true;
-      if (myAgency.length >= 4 && itAgency.length >= 4) {
-        if (myAgency.includes(itAgency) || itAgency.includes(myAgency)) return true;
-      }
+    // 3. GST Number match (exact, non-empty, case-insensitive, ignore dummy placeholder)
+    const myGst = String(user.agentDetails?.gstNumber || user.agentDetails?.gst_number || '').trim().toUpperCase();
+    const itGst = String(itAgent.gstNumber || '').trim().toUpperCase();
+    if (myGst && itGst && myGst === itGst && myGst.length >= 10 && !myGst.includes('0000A1Z5')) {
+      return true;
     }
 
-    // 4. Founder name match
-    const myFounder = (user.agentDetails?.founderName || user.agentDetails?.founder_name || founderName || '').toLowerCase().trim();
-    const itFounder = (itAgent.founderName || '').toLowerCase().trim();
-    if (myFounder && itFounder && myFounder.length >= 4) {
-      if (myFounder === itFounder || myFounder.includes(itFounder) || itFounder.includes(myFounder)) return true;
+    // 4. Exact Agency Name match (strict equality only, no substrings, ignore generic fallbacks)
+    const myAgency = String(user.agentDetails?.agencyName || user.agentDetails?.agency_name || '').trim().toLowerCase();
+    const itAgency = String(itAgent.agencyName || '').trim().toLowerCase();
+    const genericAgencies = new Set([
+      '', 'verified travel agency', 'partner agency', 'v3 curators', 'verified partner agency', 'my agency'
+    ]);
+    if (myAgency && itAgency && myAgency === itAgency && !genericAgencies.has(myAgency)) {
+      return true;
     }
 
-    // 5. Phone match
-    const myPhone = (user.agentDetails?.phone || agentPhone || '').replace(/[^0-9]/g, '');
-    const itPhone = (itAgent.phone || '').replace(/[^0-9]/g, '');
-    if (myPhone && itPhone && myPhone.length >= 8 && (myPhone === itPhone || myPhone.endsWith(itPhone) || itPhone.endsWith(myPhone))) {
+    // 5. Phone match (exact 10 digits only, ignore dummy numbers)
+    const myPhone = String(user.agentDetails?.phone || user.mobile || '').replace(/[^0-9]/g, '').slice(-10);
+    const itPhone = String(itAgent.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const dummyPhones = new Set(['', '9833445566', '9820389694', '9876543210']);
+    if (myPhone && itPhone && myPhone.length === 10 && myPhone === itPhone && !dummyPhones.has(myPhone)) {
       return true;
     }
 
@@ -136,7 +137,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   const myItinerarySlugs = new Set(myOwnedItineraries.map(it => String(it.slug || '').toLowerCase().trim()).filter(Boolean));
   const myItineraryTitles = new Set(myOwnedItineraries.map(it => it.title.toLowerCase().trim()));
 
-  // Check if an order was placed by a customer for THIS SPECIFIC AGENT's itineraries
+  // Check if an order was placed by a customer for THIS SPECIFIC AGENT's itineraries (Strict Isolation)
   const isOrderForCurrentAgent = (o: any) => {
     if (!o) return false;
 
@@ -154,28 +155,22 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 
     // Check if the order has explicit agent details matching this agent
     const oAgentEmail = String(o.agent_email || o.agentEmail || '').toLowerCase().trim();
-    const myEmail = (user.agentDetails?.email || user.email || agentEmail || '').toLowerCase().trim();
+    const myEmail = String(user.agentDetails?.email || user.email || '').toLowerCase().trim();
     if (oAgentEmail && myEmail && oAgentEmail === myEmail) {
       return true;
     }
 
     const oAgentName = String(o.agent_name || o.agentName || '').toLowerCase().trim();
-    const myAgency = (user.agentDetails?.agencyName || user.agentDetails?.agency_name || agencyName || '').toLowerCase().trim();
-    if (oAgentName && myAgency) {
-      if (oAgentName === myAgency) return true;
-      if (oAgentName.length >= 4 && myAgency.length >= 4) {
-        if (oAgentName.includes(myAgency) || myAgency.includes(oAgentName)) return true;
-      }
+    const myAgency = String(user.agentDetails?.agencyName || user.agentDetails?.agency_name || '').toLowerCase().trim();
+    const genericAgencies = new Set(['', 'verified travel agency', 'partner agency', 'v3 curators', 'verified partner agency', 'my agency']);
+    if (oAgentName && myAgency && oAgentName === myAgency && !genericAgencies.has(myAgency)) {
+      return true;
     }
 
-    const myFounder = (user.agentDetails?.founderName || user.agentDetails?.founder_name || founderName || '').toLowerCase().trim();
-    if (oAgentName && myFounder && myFounder.length >= 4) {
-      if (oAgentName === myFounder || oAgentName.includes(myFounder) || myFounder.includes(oAgentName)) return true;
-    }
-
-    const oAgentPhone = String(o.agent_phone || o.agentPhone || '').replace(/[^0-9]/g, '');
-    const myPhone = (user.agentDetails?.phone || agentPhone || '').replace(/[^0-9]/g, '');
-    if (oAgentPhone && myPhone && myPhone.length >= 8 && (oAgentPhone === myPhone || oAgentPhone.endsWith(myPhone) || myPhone.endsWith(oAgentPhone))) {
+    const oAgentPhone = String(o.agent_phone || o.agentPhone || '').replace(/[^0-9]/g, '').slice(-10);
+    const myPhone = String(user.agentDetails?.phone || user.mobile || '').replace(/[^0-9]/g, '').slice(-10);
+    const dummyPhones = new Set(['', '9833445566', '9820389694', '9876543210']);
+    if (oAgentPhone && myPhone && myPhone.length === 10 && oAgentPhone === myPhone && !dummyPhones.has(myPhone)) {
       return true;
     }
 
@@ -282,16 +277,8 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Scope filter (My agency vs All)
-  const isAgentMatch = (it: Itinerary) => {
-    if (scopeFilter === 'all') return true;
-    return isAgentOwnedItinerary(it);
-  };
-
-  const filteredItineraries = allItineraries.filter(it => {
-    // Scope filter (My agency vs All)
-    if (!isAgentMatch(it)) return false;
-
+  // Filter ONLY itineraries owned by THIS specific agent (Strict Isolation)
+  const filteredItineraries = myOwnedItineraries.filter(it => {
     // Region filter
     if (regionFilter !== 'all' && it.region !== regionFilter) return false;
 
@@ -594,11 +581,11 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
           </div>
           <div className="agent-kpi-card">
             <div className="kpi-icon-box bg-blue-50 text-blue-600">
-              <Eye size={18} />
+              <ShieldCheck size={18} />
             </div>
             <div className="kpi-info">
-              <span className="kpi-val">{allItineraries.length}</span>
-              <span className="kpi-lbl">Total Market Itineraries</span>
+              <span className="kpi-val">Verified</span>
+              <span className="kpi-lbl">Private Studio Workspace</span>
             </div>
           </div>
           <div className="agent-kpi-card">
@@ -670,19 +657,11 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
               </div>
 
               <div className="agent-filters-row">
-                <div className="scope-switch-pills">
-                  <button 
-                    className={`scope-pill ${scopeFilter === 'my' ? 'active' : ''}`}
-                    onClick={() => setScopeFilter('my')}
-                  >
-                    My Agency Itineraries ({myBlueprintsCount})
-                  </button>
-                  <button 
-                    className={`scope-pill ${scopeFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setScopeFilter('all')}
-                  >
-                    All Platform Itineraries ({allItineraries.length})
-                  </button>
+                <div className="agent-scope-badge-wrap flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
+                    <ShieldCheck size={14} className="text-emerald-600" />
+                    Private Agency Workspace ({myBlueprintsCount} {myBlueprintsCount === 1 ? 'Itinerary' : 'Itineraries'})
+                  </span>
                 </div>
 
                 <div className="region-select-wrap">
@@ -703,11 +682,11 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
             {filteredItineraries.length === 0 ? (
               <div className="agent-empty-box">
                 <FileText size={48} className="text-slate-300 mb-3" />
-                <h4 className="text-base font-bold text-slate-700">No itineraries found</h4>
+                <h4 className="text-base font-bold text-slate-700">No Itineraries in Your Agency Studio</h4>
                 <p className="text-xs text-slate-500 max-w-md mt-1 mb-4">
-                  {scopeFilter === 'my' 
-                    ? "You haven't created any itineraries for your agency yet. Click below to add your first travel itinerary!"
-                    : "No itineraries matched your search criteria."}
+                  {myBlueprintsCount === 0 
+                    ? "You haven't created any itineraries for your agency yet. Each travel agent's workspace is private and isolated. Click below to add your first travel itinerary!"
+                    : "No itineraries in your portfolio matched your search criteria."}
                 </p>
                 <button 
                   className="btn-agent-solid max-w-xs"
