@@ -5,7 +5,7 @@ import {
   Eye, EyeOff, Building
 } from 'lucide-react';
 import type { UserProfile } from '../types';
-import { API_BASE_URL } from '../utils/api';
+import { API_BASE_URL, registerAgentInBackend } from '../utils/api';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -51,6 +51,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showAgentPassword, setShowAgentPassword] = useState(false);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
+
+  // Travel Agent Sign Up State (Create Account)
+  const [agentAgencyName, setAgentAgencyName] = useState('');
+  const [agentFounderName, setAgentFounderName] = useState('');
+  const [agentEmail, setAgentEmail] = useState('');
+  const [agentMobile, setAgentMobile] = useState('');
+  const [agentGstin, setAgentGstin] = useState('');
+  const [agentCity, setAgentCity] = useState('');
 
   // Admin Form State
   const [adminEmail, setAdminEmail] = useState('');
@@ -105,9 +113,93 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onClose();
   };
 
-  // Handle Travel Agent Submit
+  // Handle Travel Agent Submit (Sign In or Create Account)
   const handleAgentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === 'signup') {
+      const cleanAgency = agentAgencyName.trim();
+      const cleanFounder = agentFounderName.trim();
+      const cleanEmail = agentEmail.trim().toLowerCase();
+      const cleanMobile = agentMobile.trim();
+      const cleanGst = agentGstin.trim().toUpperCase();
+      const cleanPass = agentPassword.trim();
+
+      if (!cleanAgency) {
+        setAgentError('Please enter your Legal Agency or Trade Name.');
+        return;
+      }
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        setAgentError('Please enter a valid Business Email Address.');
+        return;
+      }
+      if (!cleanMobile) {
+        setAgentError('Please enter your 10-Digit Mobile / WhatsApp Number.');
+        return;
+      }
+      if (!cleanGst || cleanGst.length < 10) {
+        setAgentError('Please enter a valid Indian GSTIN number (min. 10 chars).');
+        return;
+      }
+      if (!cleanPass || cleanPass.length < 4) {
+        setAgentError('Please choose an agency account password with at least 4 characters.');
+        return;
+      }
+
+      setAgentLoading(true);
+      setAgentError(null);
+
+      const agentKey = cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 16) || cleanGst.toLowerCase();
+      const uniqueAgentId = `ag-${agentKey || Date.now().toString(36)}`;
+
+      const newAgentPayload = {
+        id: uniqueAgentId,
+        agencyName: cleanAgency,
+        founderName: cleanFounder || cleanAgency,
+        email: cleanEmail,
+        phone: cleanMobile,
+        whatsapp: cleanMobile,
+        gstNumber: cleanGst,
+        password: cleanPass,
+        city: agentCity.trim() || 'Mumbai',
+        state: 'Maharashtra',
+        status: 'VERIFIED',
+        role: 'agent' as const
+      };
+
+      try {
+        await registerAgentInBackend(newAgentPayload);
+      } catch (err) {
+        console.warn('Backend agent registration notice:', err);
+      }
+
+      const agentProfile: Partial<UserProfile> = {
+        fullName: cleanFounder || cleanAgency,
+        email: cleanEmail,
+        mobile: cleanMobile,
+        isLoggedIn: true,
+        role: 'agent' as const,
+        agentDetails: {
+          id: uniqueAgentId,
+          agencyName: cleanAgency,
+          founderName: cleanFounder || cleanAgency,
+          gstNumber: cleanGst,
+          phone: cleanMobile,
+          email: cleanEmail,
+          whatsapp: cleanMobile,
+          city: agentCity.trim() || 'Mumbai',
+          state: 'Maharashtra',
+          status: 'VERIFIED'
+        }
+      };
+
+      onLoginSuccess(agentProfile);
+      onClose();
+      setAgentLoading(false);
+      return;
+    }
+
+    // mode === 'login'
     const cleanId = agentIdentifier.trim();
     if (!cleanId) {
       setAgentError('Please enter your registered Agency Email or GST Number.');
@@ -496,6 +588,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
+            {/* Mode Switcher for Travel Agent (Sign In vs Create Agent Account) */}
+            <div className="auth-tab-switch agent-switch mb-3">
+              <button 
+                type="button"
+                className={`auth-switch-btn ${mode === 'login' ? 'active' : ''}`}
+                onClick={() => {
+                  setMode('login');
+                  setAgentError(null);
+                }}
+              >
+                Sign In
+              </button>
+              <button 
+                type="button"
+                className={`auth-switch-btn ${mode === 'signup' ? 'active' : ''}`}
+                onClick={() => {
+                  setMode('signup');
+                  setAgentError(null);
+                }}
+              >
+                Create Agent Account
+              </button>
+            </div>
+
             {/* Error Notification */}
             {agentError && (
               <div className="auth-error-alert">
@@ -504,89 +620,251 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            {/* Travel Agent Credentials Form */}
+            {/* Travel Agent Form */}
             <form onSubmit={handleAgentSubmit} className="auth-v3-form">
-              <div className="auth-v3-field-group">
-                <div className="auth-v3-label-row">
-                  <label className="auth-v3-label">Registered Agency Email or GST Number *</label>
-                </div>
-                <div className="auth-v3-input-wrapper">
-                  <Building size={16} className="auth-v3-input-icon" />
-                  <input 
-                    type="text" 
-                    value={agentIdentifier} 
-                    onChange={(e) => setAgentIdentifier(e.target.value)} 
-                    placeholder="e.g. aditya@royalodyssey.com or V3G-374380"
-                    className="auth-v3-input"
-                    required
-                  />
-                </div>
-              </div>
+              {mode === 'signup' ? (
+                <>
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Legal Agency / Trade Name *</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Building size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type="text" 
+                        value={agentAgencyName} 
+                        onChange={(e) => setAgentAgencyName(e.target.value)} 
+                        placeholder="e.g. Odyssey Travels Pvt Ltd"
+                        className="auth-v3-input"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="auth-v3-field-group">
-                <div className="auth-v3-label-row">
-                  <label className="auth-v3-label">Agency Account Password *</label>
-                  <a 
-                    href="#forgot" 
-                    onClick={(e) => { e.preventDefault(); alert('Password reset instructions sent to registered agency email.'); }} 
-                    className="auth-v3-forgot-link"
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Founder / Principal Name *</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <User size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type="text" 
+                        value={agentFounderName} 
+                        onChange={(e) => setAgentFounderName(e.target.value)} 
+                        placeholder="e.g. Rajesh Khurana"
+                        className="auth-v3-input"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Official Business Email *</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Mail size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type="email" 
+                        value={agentEmail} 
+                        onChange={(e) => setAgentEmail(e.target.value)} 
+                        placeholder="contact@agency.com"
+                        className="auth-v3-input"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="auth-v3-field-group">
+                      <div className="auth-v3-label-row">
+                        <label className="auth-v3-label">Mobile / WhatsApp *</label>
+                      </div>
+                      <div className="auth-v3-input-wrapper">
+                        <Phone size={16} className="auth-v3-input-icon" />
+                        <input 
+                          type="tel" 
+                          value={agentMobile} 
+                          onChange={(e) => setAgentMobile(e.target.value)} 
+                          placeholder="+91 98765 43210"
+                          className="auth-v3-input"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="auth-v3-field-group">
+                      <div className="auth-v3-label-row">
+                        <label className="auth-v3-label">15-Digit GSTIN *</label>
+                      </div>
+                      <div className="auth-v3-input-wrapper">
+                        <ShieldCheck size={16} className="auth-v3-input-icon" />
+                        <input 
+                          type="text" 
+                          value={agentGstin} 
+                          onChange={(e) => setAgentGstin(e.target.value.toUpperCase())} 
+                          placeholder="27AABCU9603R1ZM"
+                          className="auth-v3-input uppercase"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">City / Headquarters</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Building size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type="text" 
+                        value={agentCity} 
+                        onChange={(e) => setAgentCity(e.target.value)} 
+                        placeholder="e.g. Mumbai, New Delhi"
+                        className="auth-v3-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Create Studio Password *</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Lock size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type={showAgentPassword ? 'text' : 'password'} 
+                        value={agentPassword} 
+                        onChange={(e) => setAgentPassword(e.target.value)} 
+                        placeholder="••••••••"
+                        className="auth-v3-input"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAgentPassword(!showAgentPassword)}
+                        className="auth-v3-eye-btn"
+                        tabIndex={-1}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showAgentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="auth-v3-notice-strip">
+                    <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                    <span>Instant activation: Verified partner studio access upon registration</span>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={agentLoading}
+                    className="auth-v3-submit-btn agent-btn"
                   >
-                    Forgot password?
-                  </a>
-                </div>
-                <div className="auth-v3-input-wrapper">
-                  <Lock size={16} className="auth-v3-input-icon" />
-                  <input 
-                    type={showAgentPassword ? 'text' : 'password'} 
-                    value={agentPassword} 
-                    onChange={(e) => setAgentPassword(e.target.value)} 
-                    placeholder="••••••••"
-                    className="auth-v3-input"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAgentPassword(!showAgentPassword)}
-                    className="auth-v3-eye-btn"
-                    tabIndex={-1}
-                    aria-label="Toggle password visibility"
-                  >
-                    {showAgentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    <Briefcase size={16} />
+                    <span>{agentLoading ? 'Creating Agency Account...' : 'Register Agency & Open Studio'}</span>
                   </button>
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Registered Agency Email or GST Number *</label>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Building size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type="text" 
+                        value={agentIdentifier} 
+                        onChange={(e) => setAgentIdentifier(e.target.value)} 
+                        placeholder="e.g. aditya@royalodyssey.com or V3G-374380"
+                        className="auth-v3-input"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="auth-v3-notice-strip">
-                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                <span>Real-time sync: Changes immediately appear on Customer Portal</span>
-              </div>
+                  <div className="auth-v3-field-group">
+                    <div className="auth-v3-label-row">
+                      <label className="auth-v3-label">Agency Account Password *</label>
+                      <a 
+                        href="#forgot" 
+                        onClick={(e) => { e.preventDefault(); alert('Password reset instructions sent to registered agency email.'); }} 
+                        className="auth-v3-forgot-link"
+                      >
+                        Forgot password?
+                      </a>
+                    </div>
+                    <div className="auth-v3-input-wrapper">
+                      <Lock size={16} className="auth-v3-input-icon" />
+                      <input 
+                        type={showAgentPassword ? 'text' : 'password'} 
+                        value={agentPassword} 
+                        onChange={(e) => setAgentPassword(e.target.value)} 
+                        placeholder="••••••••"
+                        className="auth-v3-input"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAgentPassword(!showAgentPassword)}
+                        className="auth-v3-eye-btn"
+                        tabIndex={-1}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showAgentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
 
-              <button 
-                type="submit" 
-                disabled={agentLoading}
-                className="auth-v3-submit-btn agent-btn"
-              >
-                <Briefcase size={16} />
-                <span>{agentLoading ? 'Signing into Agent Studio...' : 'Sign In to Travel Agent Studio'}</span>
-              </button>
+                  <div className="auth-v3-notice-strip">
+                    <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                    <span>Real-time sync: Changes immediately appear on Customer Portal</span>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={agentLoading}
+                    className="auth-v3-submit-btn agent-btn"
+                  >
+                    <Briefcase size={16} />
+                    <span>{agentLoading ? 'Signing into Agent Studio...' : 'Sign In to Travel Agent Studio'}</span>
+                  </button>
+                </>
+              )}
             </form>
 
-            {/* Registration CTA */}
+            {/* Registration CTA / Switch */}
             <div className="auth-v3-footer">
               <span className="auth-v3-footer-prompt">
-                New travel agency or tour operator?
+                {mode === 'signup' ? 'Already registered your travel agency?' : 'New travel agency or tour operator?'}
               </span>
               <button 
                 type="button"
                 className="auth-v3-footer-btn"
                 onClick={() => {
-                  onClose();
-                  if (onOpenAgentOnboarding) onOpenAgentOnboarding();
+                  setAgentError(null);
+                  setMode(mode === 'signup' ? 'login' : 'signup');
                 }}
               >
-                <span>Register Agency & Complete KYC Verification</span>
+                <span>{mode === 'signup' ? 'Sign In to Existing Agency Account' : 'Create Agent Account (Instant Setup)'}</span>
                 <ChevronRight size={13} />
               </button>
+              {onOpenAgentOnboarding && (
+                <button
+                  type="button"
+                  className="auth-v3-kyc-link text-[11px] text-emerald-700 hover:underline mt-2 flex items-center gap-1"
+                  onClick={() => {
+                    onClose();
+                    onOpenAgentOnboarding();
+                  }}
+                >
+                  <span>Need full verified agency accreditation? Submit Legal KYC Documents</span>
+                  <ChevronRight size={11} />
+                </button>
+              )}
             </div>
           </div>
         )}
