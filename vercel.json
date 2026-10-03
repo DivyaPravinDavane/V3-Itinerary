@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/itineraries/:id",
+      "destination": "/api/itineraries.js?id=:id"
+    },
+    {
+      "source": "/api/agent-created-itineraries/:id",
+      "destination": "/api/agent-created-itineraries.js?id=:id"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

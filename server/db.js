@@ -533,15 +533,17 @@ export async function updateItineraryPopular(id, isPopular) {
 
 export async function deleteItinerary(id) {
   try {
-    const [existing] = await mysqlPool.query('SELECT destination FROM itineraries WHERE id = ?', [id]);
+    const cleanId = String(id || '').trim();
+    const [existing] = await mysqlPool.query('SELECT destination FROM itineraries WHERE id = ? OR TRIM(id) = ?', [cleanId, cleanId]);
     const destName = existing[0]?.destination;
-    const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ?', [id]);
-    await mysqlPool.query('DELETE FROM created_itineraries_by_travel_agents WHERE id = ?', [id]).catch(() => {});
+    const [result] = await mysqlPool.query('DELETE FROM itineraries WHERE id = ? OR TRIM(id) = ?', [cleanId, cleanId]);
+    await mysqlPool.query('DELETE FROM created_itineraries_by_travel_agents WHERE id = ? OR TRIM(id) = ?', [cleanId, cleanId]).catch(() => {});
+    await mysqlPool.query('DELETE FROM saved_itineraries WHERE itinerary_id = ? OR TRIM(itinerary_id) = ?', [cleanId, cleanId]).catch(() => {});
     if (destName) {
       const [cnt] = await mysqlPool.query('SELECT COUNT(*) as cnt FROM itineraries WHERE LOWER(destination) = LOWER(?)', [destName]);
       await mysqlPool.query('UPDATE destinations SET itinerary_count = ? WHERE LOWER(name) = LOWER(?)', [cnt[0]?.cnt || 0, destName]);
     }
-    await logActivity('ITINERARY_DELETED', `Deleted itinerary ${id}`);
+    await logActivity('ITINERARY_DELETED', `Deleted itinerary ${cleanId}`);
     return result;
   } catch (err) {
     console.error('Delete itinerary error:', err);

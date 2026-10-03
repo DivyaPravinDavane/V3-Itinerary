@@ -547,21 +547,25 @@ app.put('/api/itineraries/:id/featured', async (req, res) => {
   }
 });
 
-app.put('/api/itineraries/:id', async (req, res) => {
+app.put(['/api/itineraries/:id', '/api/itineraries'], async (req, res) => {
   try {
-    const saved = await insertItinerary({ ...req.body, id: req.params.id });
+    const id = req.params?.id || req.query?.id || req.body?.id;
+    if (!id) return res.status(400).json({ error: 'Missing itinerary ID for update' });
+    const saved = await insertItinerary({ ...req.body, id });
     broadcastRealtimeEvent('itinerary_saved', { itinerary: saved });
-    res.json({ success: true, message: 'Blueprint updated dynamically in MySQL', itinerary: saved });
+    res.json({ success: true, message: 'Blueprint updated dynamically in MySQL and created_itineraries_by_travel_agents', itinerary: saved });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update itinerary', details: error.message });
   }
 });
 
-app.delete('/api/itineraries/:id', async (req, res) => {
+app.delete(['/api/itineraries/:id', '/api/itineraries'], async (req, res) => {
   try {
-    const result = await deleteItinerary(req.params.id);
-    broadcastRealtimeEvent('itinerary_saved', { id: req.params.id, deleted: true });
-    res.json({ success: true, message: 'Blueprint removed from MySQL', result });
+    const id = req.params?.id || req.query?.id || req.body?.id;
+    if (!id) return res.status(400).json({ error: 'Missing itinerary ID for deletion' });
+    const result = await deleteItinerary(id);
+    broadcastRealtimeEvent('itinerary_saved', { id, deleted: true });
+    res.json({ success: true, message: 'Blueprint removed from MySQL and created_itineraries_by_travel_agents', result });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete itinerary', details: error.message });
   }
@@ -589,6 +593,30 @@ app.post('/api/agent-created-itineraries', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save agent created itinerary', details: error.message });
+  }
+});
+
+app.put(['/api/agent-created-itineraries/:id', '/api/agent-created-itineraries'], async (req, res) => {
+  try {
+    const id = req.params?.id || req.query?.id || req.body?.id;
+    if (!id) return res.status(400).json({ error: 'Missing itinerary ID for update' });
+    const saved = await insertItinerary({ ...req.body, id });
+    broadcastRealtimeEvent('itinerary_saved', { itinerary: saved });
+    res.json({ success: true, message: 'Itinerary updated in created_itineraries_by_travel_agents (phpMyAdmin)', itinerary: saved });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update agent created itinerary', details: error.message });
+  }
+});
+
+app.delete(['/api/agent-created-itineraries/:id', '/api/agent-created-itineraries'], async (req, res) => {
+  try {
+    const id = req.params?.id || req.query?.id || req.body?.id;
+    if (!id) return res.status(400).json({ error: 'Missing itinerary ID for deletion' });
+    const result = await deleteItinerary(id);
+    broadcastRealtimeEvent('itinerary_saved', { id, deleted: true });
+    res.json({ success: true, message: 'Itinerary removed from created_itineraries_by_travel_agents (phpMyAdmin)', result });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete agent created itinerary', details: error.message });
   }
 });
 

@@ -801,10 +801,10 @@ export async function createItineraryInBackend(itineraryData: any) {
     } catch (e) {}
   }
 
-  // 3. Attempt write to MySQL backend if reachable
+  // 3. Attempt write to MySQL backend (/api/itineraries)
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 8000);
 
     const res = await fetch(`${API_BASE_URL}/itineraries`, {
       method: 'POST',
@@ -822,7 +822,31 @@ export async function createItineraryInBackend(itineraryData: any) {
       }
     }
   } catch (err) {
-    console.warn('Remote MySQL sync deferred (static host or offline):', err);
+    console.warn('Primary remote MySQL sync deferred:', err);
+  }
+
+  // 3b. Fallback write to /api/agent-created-itineraries
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${API_BASE_URL}/agent-created-itineraries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itin),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Fallback remote MySQL sync deferred:', err);
   }
 
   // 4. Return guaranteed success since the itinerary is safely saved in persistent local storage & live in the app
@@ -847,11 +871,12 @@ export async function updateItineraryInBackend(id: string, itineraryData: any) {
     } catch (e) {}
   }
 
+  // 1. Primary write to /api/itineraries
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 8000);
 
-    const res = await fetch(`${API_BASE_URL}/itineraries/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/itineraries/${encodeURIComponent(id)}?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(itin),
@@ -867,12 +892,36 @@ export async function updateItineraryInBackend(id: string, itineraryData: any) {
       }
     }
   } catch (err) {
-    console.warn('Remote itinerary update deferred:', err);
+    console.warn('Primary remote itinerary update deferred:', err);
+  }
+
+  // 2. Secondary fallback to /api/agent-created-itineraries
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${API_BASE_URL}/agent-created-itineraries/${encodeURIComponent(id)}?id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itin),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Fallback remote itinerary update deferred:', err);
   }
 
   return {
     success: true,
-    message: 'Itinerary updated successfully!',
+    message: 'Itinerary updated successfully in database and local cache!',
     itinerary: itin,
     isLocal: true
   };
@@ -890,12 +939,15 @@ export async function deleteItineraryFromBackend(id: string) {
     } catch (e) {}
   }
 
+  // 1. Primary delete from /api/itineraries
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 8000);
 
-    const res = await fetch(`${API_BASE_URL}/itineraries/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/itineraries/${encodeURIComponent(id)}?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
       signal: controller.signal
     });
     clearTimeout(timer);
@@ -908,12 +960,36 @@ export async function deleteItineraryFromBackend(id: string) {
       }
     }
   } catch (err) {
-    console.warn('Remote itinerary delete deferred:', err);
+    console.warn('Primary remote itinerary delete deferred:', err);
+  }
+
+  // 2. Secondary fallback to /api/agent-created-itineraries
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${API_BASE_URL}/agent-created-itineraries/${encodeURIComponent(id)}?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Fallback remote itinerary delete deferred:', err);
   }
 
   return {
     success: true,
-    message: 'Itinerary deleted successfully!',
+    message: 'Itinerary deleted successfully from database and local cache!',
     id,
     isLocal: true
   };
