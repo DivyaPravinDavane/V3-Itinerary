@@ -13,6 +13,7 @@ import {
   fetchOrdersFromBackend 
 } from '../utils/api';
 import { CoverImageUploader, PRESET_COVERS } from './CoverImageUploader';
+import { ItineraryPdfUploader } from './ItineraryPdfUploader';
 
 interface AgentDashboardModalProps {
   isOpen?: boolean;
@@ -221,6 +222,9 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
     bestTimeToVisit: 'October to March',
     overview: '',
     coverImage: PRESET_COVERS[0].url,
+    pdfUrl: '',
+    pdfName: '',
+    pdfSize: 0,
     inclusions: [
       'Airport / Railway station transfers in private AC vehicle',
       'Daily authentic breakfast & welcome drinks',
@@ -403,7 +407,10 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
         localTransport: Math.round(Number(formData.estimatedTripCost) * 0.05)
       },
       inclusions: formData.inclusions,
-      exclusions: formData.exclusions
+      exclusions: formData.exclusions,
+      pdfUrl: formData.pdfUrl || undefined,
+      pdfName: formData.pdfName || undefined,
+      pdfSize: formData.pdfSize || undefined
     };
 
     try {
@@ -428,7 +435,10 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
           ...prev,
           title: '',
           destination: '',
-          overview: ''
+          overview: '',
+          pdfUrl: '',
+          pdfName: '',
+          pdfSize: 0
         }));
       } else {
         // Fallback: Itinerary was safely preserved locally
@@ -720,6 +730,11 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                       <span className="it-card-region-badge">
                         {it.region || 'Domestic'}
                       </span>
+                      {it.pdfUrl && (
+                        <span className="it-card-pdf-badge" title="Official Agent PDF Document Attached">
+                          <FileText size={10} /> PDF
+                        </span>
+                      )}
                     </div>
 
                     {/* Card Content */}
@@ -942,156 +957,194 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 />
               </div>
 
-              {/* 4. Day-by-Day Schedule Builder */}
-              <div className="mt-6 border-t pt-4">
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">Day-by-Day Itinerary Builder ({formData.days.length} Days)</h4>
-                    <p className="text-xs text-slate-500">Add detailed morning, afternoon, and evening experiences for each day.</p>
-                  </div>
-                  <button 
-                    type="button" 
-                    className="btn-add-day"
-                    onClick={handleAddDay}
-                  >
-                    <Plus size={14} />
-                    <span>+ Add Next Day</span>
-                  </button>
-                </div>
+              {/* 4. Primary: Upload Itinerary PDF from Computer */}
+              <div className="mt-5 p-5 rounded-xl bg-gradient-to-br from-red-50/60 via-slate-50 to-orange-50/40 border-2 border-dashed border-red-200 shadow-sm">
+                <ItineraryPdfUploader 
+                  currentPdfUrl={formData.pdfUrl}
+                  currentPdfName={formData.pdfName}
+                  currentPdfSize={formData.pdfSize}
+                  onPdfChange={(pdf) => {
+                    if (pdf) {
+                      setFormData(prev => ({
+                        ...prev,
+                        pdfUrl: pdf.url,
+                        pdfName: pdf.name,
+                        pdfSize: pdf.size
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        pdfUrl: '',
+                        pdfName: '',
+                        pdfSize: 0
+                      }));
+                    }
+                  }}
+                  label="Upload Itinerary PDF from PC / Computer"
+                  helperText="Upload your official comprehensive itinerary PDF (day-by-day plan, pricing, hotels, vouchers, & inclusions). Customers and travellers will be able to view, preview, and download this exact PDF directly!"
+                />
+              </div>
 
-                <div className="space-y-3">
-                  {formData.days.map((day, idx) => (
-                    <div key={idx} className="agent-day-card">
-                      <div className="day-card-header flex justify-between items-center">
-                        <span className="day-card-badge">Day {day.dayNumber}</span>
-                        {formData.days.length > 1 && (
-                          <button 
-                            type="button" 
-                            className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
-                            onClick={() => handleRemoveDay(idx)}
-                          >
-                            <Trash2 size={13} />
-                            <span>Remove Day</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="agent-day-grid mt-2">
-                        <div className="col-span-2">
-                          <label className="agent-lbl-sm">Day Title</label>
-                          <input 
-                            type="text"
-                            value={day.title}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData(prev => {
-                                const nextDays = [...prev.days];
-                                nextDays[idx].title = val;
-                                return { ...prev, days: nextDays };
-                              });
-                            }}
-                            className="agent-input-sm"
-                            placeholder="e.g. Arrival, Marina Cruise & Welcome Dinner"
-                          />
-                        </div>
-                        <div>
-                          <label className="agent-lbl-sm">Morning Activity</label>
-                          <input 
-                            type="text"
-                            value={day.morning}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData(prev => {
-                                const nextDays = [...prev.days];
-                                nextDays[idx].morning = val;
-                                return { ...prev, days: nextDays };
-                              });
-                            }}
-                            className="agent-input-sm"
-                            placeholder="Morning exploration..."
-                          />
-                        </div>
-                        <div>
-                          <label className="agent-lbl-sm">Afternoon Activity</label>
-                          <input 
-                            type="text"
-                            value={day.afternoon}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData(prev => {
-                                const nextDays = [...prev.days];
-                                nextDays[idx].afternoon = val;
-                                return { ...prev, days: nextDays };
-                              });
-                            }}
-                            className="agent-input-sm"
-                            placeholder="Afternoon excursion..."
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="agent-lbl-sm">Evening Activity</label>
-                          <input 
-                            type="text"
-                            value={day.evening}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormData(prev => {
-                                const nextDays = [...prev.days];
-                                nextDays[idx].evening = val;
-                                return { ...prev, days: nextDays };
-                              });
-                            }}
-                            className="agent-input-sm"
-                            placeholder="Evening dinner, shows, or markets..."
-                          />
-                        </div>
-                      </div>
+              {/* Optional: Manual Day-by-Day Schedule & Inclusions Accordion */}
+              <details className="mt-4 border border-slate-200 rounded-xl bg-slate-50/70 overflow-hidden">
+                <summary className="p-3.5 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 flex items-center justify-between transition-colors">
+                  <span className="flex items-center gap-2">
+                    <FileText size={15} className="text-slate-500" />
+                    <span>Optional: Manual Day-by-Day Activity Builder & Bullets (Click to Expand)</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal">Not required if PDF is uploaded</span>
+                </summary>
+                
+                <div className="p-4 border-t border-slate-200 bg-white">
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm">Day-by-Day Schedule Overview ({formData.days.length} Days)</h4>
+                      <p className="text-xs text-slate-500">Summary notes for travellers who scan quickly.</p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <button 
+                      type="button" 
+                      className="btn-add-day"
+                      onClick={handleAddDay}
+                    >
+                      <Plus size={14} />
+                      <span>+ Add Next Day</span>
+                    </button>
+                  </div>
 
-              {/* 5. Inclusions & Exclusions */}
-              <div className="mt-6 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-2">Package Inclusions (4 Items)</h4>
-                  {formData.inclusions.map((inc, i) => (
-                    <input 
-                      key={i}
-                      type="text"
-                      value={inc}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData(prev => {
-                          const next = [...prev.inclusions];
-                          next[i] = val;
-                          return { ...prev, inclusions: next };
-                        });
-                      }}
-                      className="agent-input-sm mb-1.5"
-                    />
-                  ))}
+                  <div className="space-y-3">
+                    {formData.days.map((day, idx) => (
+                      <div key={idx} className="agent-day-card">
+                        <div className="day-card-header flex justify-between items-center">
+                          <span className="day-card-badge">Day {day.dayNumber}</span>
+                          {formData.days.length > 1 && (
+                            <button 
+                              type="button" 
+                              className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
+                              onClick={() => handleRemoveDay(idx)}
+                            >
+                              <Trash2 size={13} />
+                              <span>Remove Day</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="agent-day-grid mt-2">
+                          <div className="col-span-2">
+                            <label className="agent-lbl-sm">Day Title</label>
+                            <input 
+                              type="text"
+                              value={day.title}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => {
+                                  const nextDays = [...prev.days];
+                                  nextDays[idx].title = val;
+                                  return { ...prev, days: nextDays };
+                                });
+                              }}
+                              className="agent-input-sm"
+                              placeholder="e.g. Arrival, Marina Cruise & Welcome Dinner"
+                            />
+                          </div>
+                          <div>
+                            <label className="agent-lbl-sm">Morning Activity</label>
+                            <input 
+                              type="text"
+                              value={day.morning}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => {
+                                  const nextDays = [...prev.days];
+                                  nextDays[idx].morning = val;
+                                  return { ...prev, days: nextDays };
+                                });
+                              }}
+                              className="agent-input-sm"
+                              placeholder="Morning exploration..."
+                            />
+                          </div>
+                          <div>
+                            <label className="agent-lbl-sm">Afternoon Activity</label>
+                            <input 
+                              type="text"
+                              value={day.afternoon}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => {
+                                  const nextDays = [...prev.days];
+                                  nextDays[idx].afternoon = val;
+                                  return { ...prev, days: nextDays };
+                                });
+                              }}
+                              className="agent-input-sm"
+                              placeholder="Afternoon excursion..."
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="agent-lbl-sm">Evening Activity</label>
+                            <input 
+                              type="text"
+                              value={day.evening}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => {
+                                  const nextDays = [...prev.days];
+                                  nextDays[idx].evening = val;
+                                  return { ...prev, days: nextDays };
+                                });
+                              }}
+                              className="agent-input-sm"
+                              placeholder="Evening dinner, shows, or markets..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 5. Inclusions & Exclusions */}
+                  <div className="mt-6 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm mb-2">Package Inclusions (4 Items)</h4>
+                      {formData.inclusions.map((inc, i) => (
+                        <input 
+                          key={i}
+                          type="text"
+                          value={inc}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData(prev => {
+                              const next = [...prev.inclusions];
+                              next[i] = val;
+                              return { ...prev, inclusions: next };
+                            });
+                          }}
+                          className="agent-input-sm mb-1.5"
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm mb-2">Package Exclusions (3 Items)</h4>
+                      {formData.exclusions.map((exc, i) => (
+                        <input 
+                          key={i}
+                          type="text"
+                          value={exc}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData(prev => {
+                              const next = [...prev.exclusions];
+                              next[i] = val;
+                              return { ...prev, exclusions: next };
+                            });
+                          }}
+                          className="agent-input-sm mb-1.5"
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-2">Package Exclusions (3 Items)</h4>
-                  {formData.exclusions.map((exc, i) => (
-                    <input 
-                      key={i}
-                      type="text"
-                      value={exc}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData(prev => {
-                          const next = [...prev.exclusions];
-                          next[i] = val;
-                          return { ...prev, exclusions: next };
-                        });
-                      }}
-                      className="agent-input-sm mb-1.5"
-                    />
-                  ))}
-                </div>
-              </div>
+              </details>
 
               {/* Form Validation Error Alert */}
               {formError && (
@@ -1479,6 +1532,33 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                   label="Update Cover Photo"
                   helperText="Upload a fresh photo directly from your PC/computer or pick a preset."
                 />
+
+                <div className="mt-4 p-4 rounded-xl bg-red-50/50 border border-red-200">
+                  <ItineraryPdfUploader 
+                    currentPdfUrl={editingItinerary.pdfUrl}
+                    currentPdfName={editingItinerary.pdfName}
+                    currentPdfSize={editingItinerary.pdfSize}
+                    onPdfChange={(pdf) => {
+                      if (pdf) {
+                        setEditingItinerary({
+                          ...editingItinerary,
+                          pdfUrl: pdf.url,
+                          pdfName: pdf.name,
+                          pdfSize: pdf.size
+                        });
+                      } else {
+                        setEditingItinerary({
+                          ...editingItinerary,
+                          pdfUrl: '',
+                          pdfName: '',
+                          pdfSize: 0
+                        });
+                      }
+                    }}
+                    label="Official Itinerary Document (PDF)"
+                    helperText="Upload or update the official itinerary PDF for travelers to view and download directly."
+                  />
+                </div>
 
                 <div>
                   <label className="agent-lbl">Overview Summary</label>

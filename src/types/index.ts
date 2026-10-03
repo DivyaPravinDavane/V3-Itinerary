@@ -66,6 +66,9 @@ export interface Itinerary {
   inclusions: string[];
   exclusions: string[];
   isPopular?: boolean;
+  pdfUrl?: string;
+  pdfName?: string;
+  pdfSize?: number;
 }
 
 export interface OrderRecord {

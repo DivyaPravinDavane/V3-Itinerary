@@ -346,7 +346,9 @@ function parseItinerary(row) {
     hotels: safeJsonParse(row.hotels_json, []),
     budgetBreakdown: safeJsonParse(row.budget_breakdown_json, {}),
     inclusions: safeJsonParse(row.inclusions_json, []),
-    exclusions: safeJsonParse(row.exclusions_json, [])
+    exclusions: safeJsonParse(row.exclusions_json, []),
+    pdfUrl: row.pdf_url || '',
+    pdfName: row.pdf_name || ''
   };
 }
 
@@ -385,8 +387,8 @@ export async function insertItinerary(it) {
       rating, review_count, cover_image, gallery_images_json,
       overview, best_time_to_visit, is_popular,
       agent_json, days_json, hotels_json, budget_breakdown_json,
-      inclusions_json, exclusions_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      inclusions_json, exclusions_json, pdf_url, pdf_name
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       title = VALUES(title),
       slug = VALUES(slug),
@@ -412,7 +414,9 @@ export async function insertItinerary(it) {
       hotels_json = VALUES(hotels_json),
       budget_breakdown_json = VALUES(budget_breakdown_json),
       inclusions_json = VALUES(inclusions_json),
-      exclusions_json = VALUES(exclusions_json)
+      exclusions_json = VALUES(exclusions_json),
+      pdf_url = VALUES(pdf_url),
+      pdf_name = VALUES(pdf_name)
   `, [
     itinId, slug, it.destination || 'Destination', it.country || 'International', it.region || 'International', it.title,
     it.durationDays || 4, it.durationNights || 3, it.travelerType || 'Family', it.itineraryCountLabel || '',
@@ -425,7 +429,9 @@ export async function insertItinerary(it) {
     JSON.stringify(it.hotels || []),
     JSON.stringify(it.budgetBreakdown || {}),
     JSON.stringify(it.inclusions || []),
-    JSON.stringify(it.exclusions || [])
+    JSON.stringify(it.exclusions || []),
+    it.pdfUrl || it.pdf_url || '',
+    it.pdfName || it.pdf_name || ''
   ]);
   await logActivity('ITINERARY_SAVED', `Blueprint saved: ${it.title} (${it.destination})`);
 
@@ -450,8 +456,9 @@ export async function insertItinerary(it) {
         agency_name, founder_name, agent_gst, agent_phone, agent_email, agent_city, agent_state,
         cover_image, overview, best_time_to_visit,
         inclusions_json, exclusions_json, days_json, hotels_json, budget_breakdown_json,
+        pdf_url, pdf_name,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
       ON DUPLICATE KEY UPDATE
         title = VALUES(title),
         destination = VALUES(destination),
@@ -477,6 +484,8 @@ export async function insertItinerary(it) {
         days_json = VALUES(days_json),
         hotels_json = VALUES(hotels_json),
         budget_breakdown_json = VALUES(budget_breakdown_json),
+        pdf_url = VALUES(pdf_url),
+        pdf_name = VALUES(pdf_name),
         status = 'PUBLISHED'
     `, [
       itinId, it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
@@ -488,7 +497,9 @@ export async function insertItinerary(it) {
       typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
       typeof it.days === 'string' ? it.days : JSON.stringify(it.days || []),
       typeof it.hotels === 'string' ? it.hotels : JSON.stringify(it.hotels || []),
-      typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {})
+      typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {}),
+      it.pdfUrl || it.pdf_url || '',
+      it.pdfName || it.pdf_name || ''
     ]);
   } catch (agentTableErr) {
     console.warn('[created_itineraries_by_travel_agents sync note]:', agentTableErr.message);

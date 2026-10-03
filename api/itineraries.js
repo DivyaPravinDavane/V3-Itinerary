@@ -89,7 +89,9 @@ export default async function handler(req, res) {
             hotels: typeof r.hotels_json === 'string' ? JSON.parse(r.hotels_json) : (r.hotels_json || []),
             budgetBreakdown: typeof r.budget_breakdown_json === 'string' ? JSON.parse(r.budget_breakdown_json) : (r.budget_breakdown_json || {}),
             inclusions: typeof r.inclusions_json === 'string' ? JSON.parse(r.inclusions_json) : (r.inclusions_json || []),
-            exclusions: typeof r.exclusions_json === 'string' ? JSON.parse(r.exclusions_json) : (r.exclusions_json || [])
+            exclusions: typeof r.exclusions_json === 'string' ? JSON.parse(r.exclusions_json) : (r.exclusions_json || []),
+            pdfUrl: r.pdf_url || '',
+            pdfName: r.pdf_name || ''
           };
         } catch (e) {
           return r;
@@ -129,8 +131,8 @@ export default async function handler(req, res) {
           rating, review_count, cover_image, gallery_images_json,
           overview, best_time_to_visit, is_popular,
           agent_json, days_json, hotels_json, budget_breakdown_json,
-          inclusions_json, exclusions_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          inclusions_json, exclusions_json, pdf_url, pdf_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           title = VALUES(title),
           slug = VALUES(slug),
@@ -152,7 +154,9 @@ export default async function handler(req, res) {
           hotels_json = VALUES(hotels_json),
           budget_breakdown_json = VALUES(budget_breakdown_json),
           inclusions_json = VALUES(inclusions_json),
-          exclusions_json = VALUES(exclusions_json);
+          exclusions_json = VALUES(exclusions_json),
+          pdf_url = VALUES(pdf_url),
+          pdf_name = VALUES(pdf_name);
       `, [
         itinId, slug, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic', it.title || 'Itinerary',
         it.durationDays || 5, it.durationNights || 4, it.travelerType || 'Family', it.itineraryCountLabel || '',
@@ -165,7 +169,9 @@ export default async function handler(req, res) {
         typeof it.hotels === 'string' ? it.hotels : JSON.stringify(it.hotels || []),
         typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {}),
         typeof it.inclusions === 'string' ? it.inclusions : JSON.stringify(it.inclusions || []),
-        typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || [])
+        typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
+        it.pdfUrl || it.pdf_url || '',
+        it.pdfName || it.pdf_name || ''
       ]);
 
       // 2. Insert into created_itineraries_by_travel_agents table for phpMyAdmin
@@ -177,8 +183,9 @@ export default async function handler(req, res) {
           agency_name, founder_name, agent_gst, agent_phone, agent_email, agent_city, agent_state,
           cover_image, overview, best_time_to_visit,
           inclusions_json, exclusions_json, days_json, hotels_json, budget_breakdown_json,
+          pdf_url, pdf_name,
           status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
         ON DUPLICATE KEY UPDATE
           title = VALUES(title),
           destination = VALUES(destination),
@@ -204,6 +211,8 @@ export default async function handler(req, res) {
           days_json = VALUES(days_json),
           hotels_json = VALUES(hotels_json),
           budget_breakdown_json = VALUES(budget_breakdown_json),
+          pdf_url = VALUES(pdf_url),
+          pdf_name = VALUES(pdf_name),
           status = 'PUBLISHED';
       `, [
         itinId, it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
@@ -215,7 +224,9 @@ export default async function handler(req, res) {
         typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
         typeof it.days === 'string' ? it.days : JSON.stringify(it.days || []),
         typeof it.hotels === 'string' ? it.hotels : JSON.stringify(it.hotels || []),
-        typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {})
+        typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {}),
+        it.pdfUrl || it.pdf_url || '',
+        it.pdfName || it.pdf_name || ''
       ]);
 
       return res.status(201).json({
@@ -257,7 +268,9 @@ export default async function handler(req, res) {
           access_price = ?, gst_amount = ?, total_access_price = ?, estimated_trip_cost = ?,
           cover_image = ?, overview = ?, best_time_to_visit = ?,
           agent_json = ?, days_json = ?, hotels_json = ?, budget_breakdown_json = ?,
-          inclusions_json = ?, exclusions_json = ?
+          inclusions_json = ?, exclusions_json = ?,
+          pdf_url = IF(? != '', ?, pdf_url),
+          pdf_name = IF(? != '', ?, pdf_name)
         WHERE id = ?
       `, [
         it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
@@ -270,6 +283,8 @@ export default async function handler(req, res) {
         typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {}),
         typeof it.inclusions === 'string' ? it.inclusions : JSON.stringify(it.inclusions || []),
         typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
+        it.pdfUrl || it.pdf_url || '', it.pdfUrl || it.pdf_url || '',
+        it.pdfName || it.pdf_name || '', it.pdfName || it.pdf_name || '',
         itinId
       ]);
 
@@ -282,8 +297,9 @@ export default async function handler(req, res) {
           agency_name, founder_name, agent_gst, agent_phone, agent_email, agent_city, agent_state,
           cover_image, overview, best_time_to_visit,
           inclusions_json, exclusions_json, days_json, hotels_json, budget_breakdown_json,
+          pdf_url, pdf_name,
           status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED')
         ON DUPLICATE KEY UPDATE
           title = VALUES(title),
           destination = VALUES(destination),
@@ -309,6 +325,8 @@ export default async function handler(req, res) {
           days_json = VALUES(days_json),
           hotels_json = VALUES(hotels_json),
           budget_breakdown_json = VALUES(budget_breakdown_json),
+          pdf_url = IF(VALUES(pdf_url) != '', VALUES(pdf_url), pdf_url),
+          pdf_name = IF(VALUES(pdf_name) != '', VALUES(pdf_name), pdf_name),
           status = 'PUBLISHED';
       `, [
         itinId, it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
@@ -320,7 +338,9 @@ export default async function handler(req, res) {
         typeof it.exclusions === 'string' ? it.exclusions : JSON.stringify(it.exclusions || []),
         typeof it.days === 'string' ? it.days : JSON.stringify(it.days || []),
         typeof it.hotels === 'string' ? it.hotels : JSON.stringify(it.hotels || []),
-        typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {})
+        typeof it.budgetBreakdown === 'string' ? it.budgetBreakdown : JSON.stringify(it.budgetBreakdown || {}),
+        it.pdfUrl || it.pdf_url || '',
+        it.pdfName || it.pdf_name || ''
       ]);
 
       return res.status(200).json({

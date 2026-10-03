@@ -175,7 +175,18 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                         <div className="trip-actions-col">
                           <button 
                             className="btn-download-sm" 
-                            onClick={() => generateItineraryPDF(it, order, user.fullName)}
+                            onClick={() => {
+                              if (it.pdfUrl) {
+                                const link = document.createElement('a');
+                                link.href = it.pdfUrl;
+                                link.download = it.pdfName || `${it.destination}_Itinerary_Blueprint.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              } else {
+                                generateItineraryPDF(it, order, user.fullName);
+                              }
+                            }}
                           >
                             <Download size={14} /> Download PDF
                           </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Clock, Users, Heart, Star, Lock,
   ShieldCheck, Download, CheckCircle2,
-  Calendar, CreditCard, ChevronDown, ChevronUp, FileText
+  Calendar, CreditCard, ChevronDown, ChevronUp, FileText, ExternalLink
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
 import { generateItineraryPDF, createItineraryPDFBlobUrl } from '../utils/pdfGenerator';
@@ -35,9 +35,14 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
 
-  // Generate PDF preview blob URL whenever purchased
+  // Generate PDF preview blob URL whenever purchased (or use agent uploaded PDF)
   useEffect(() => {
     if (isPurchased && itinerary) {
+      if (itinerary.pdfUrl) {
+        setPdfBlobUrl(itinerary.pdfUrl);
+        return;
+      }
+
       const activeOrder: OrderRecord = order || {
         orderId: `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-99`,
         itineraryId: itinerary.id,
@@ -68,6 +73,16 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
   if (!itinerary) return null;
 
   const handleDownloadPDF = () => {
+    if (itinerary?.pdfUrl) {
+      const link = document.createElement('a');
+      link.href = itinerary.pdfUrl;
+      link.download = itinerary.pdfName || `${itinerary.destination}_Itinerary_Blueprint.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const activeOrder: OrderRecord = order || {
       orderId: `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-99`,
       itineraryId: itinerary.id,
@@ -207,12 +222,29 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                 ========================================================================= */}
             {!isPurchased ? (
               <div className="razorpay-unlock-box">
-                <div className="lock-teaser-row">
-                  <Lock size={18} className="text-amber-500 shrink-0 mt-0.5" />
-                  <p className="lock-teaser-text">
-                    Detailed morning, afternoon & evening schedules, exact timings, direct ticket booking links, and offline PDF guide are unlocked after payment.
-                  </p>
-                </div>
+                {itinerary.pdfUrl ? (
+                  <div className="p-3 mb-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                      <FileText size={22} className="text-red-600" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                        <span className="truncate max-w-[200px]">{itinerary.pdfName || 'Verified Agent Tour Itinerary.pdf'}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase">PDF</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Official travel agency itinerary document attached. Unlocks for instant viewing & download upon payment.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="lock-teaser-row">
+                    <Lock size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                    <p className="lock-teaser-text">
+                      Detailed morning, afternoon & evening schedules, exact timings, direct ticket booking links, and offline PDF guide are unlocked after payment.
+                    </p>
+                  </div>
+                )}
 
                 <div className="razorpay-action-card">
                   <div className="rzp-badge-strip">
@@ -260,20 +292,35 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                 {/* PDF Viewer / Preview Card (The PDF is Seen!) */}
                 <div className="pdf-viewer-card">
                   <div className="pdf-card-header">
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} className="text-blue-600" />
-                      <span className="font-bold text-slate-800 text-sm">
-                        {itinerary.destination}_Itinerary_Blueprint.pdf
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText size={18} className="text-red-600 shrink-0" />
+                      <span className="font-bold text-slate-800 text-sm truncate">
+                        {itinerary.pdfName || `${itinerary.destination}_Itinerary_Blueprint.pdf`}
                       </span>
                     </div>
 
-                    <button 
-                      className="btn-pdf-download-action"
-                      onClick={handleDownloadPDF}
-                    >
-                      <Download size={15} />
-                      <span>Download PDF</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {itinerary.pdfUrl && (
+                        <a 
+                          href={itinerary.pdfUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="btn-pdf-download-action"
+                          style={{ background: '#F1F5F9', color: '#334155' }}
+                          title="Open PDF in Full Screen"
+                        >
+                          <ExternalLink size={14} />
+                          <span>Full Screen</span>
+                        </a>
+                      )}
+                      <button 
+                        className="btn-pdf-download-action"
+                        onClick={handleDownloadPDF}
+                      >
+                        <Download size={15} />
+                        <span>Download PDF</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Embedded PDF iframe viewer if available */}

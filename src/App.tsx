@@ -821,7 +821,7 @@ export function App() {
             )
           )}
           onToggleSave={handleToggleSave}
-          isPurchased={isPurchased(selectedItinerary.id)}
+          isPurchased={isPurchased(selectedItinerary.id) || user.role === 'agent'}
           order={user.purchasedOrders.find(o => o.itineraryId === selectedItinerary.id)}
           customerName={user.fullName}
           customerEmail={user.email}

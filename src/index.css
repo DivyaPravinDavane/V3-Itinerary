@@ -15604,6 +15604,339 @@ a {
   margin-bottom: 16px;
 }
 
+/* ==============================================================================
+   ITINERARY PDF UPLOADER & BLUEPRINT ATTACHMENT STYLES
+   ============================================================================== */
+.pdf-uploader-section {
+  width: 100%;
+}
+
+.badge-pdf-attached-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.pdf-upload-err-banner {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #DC2626;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pdf-dropzone {
+  border: 2px dashed #CBD5E1;
+  border-radius: 14px;
+  background: #FFFFFF;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  outline: none;
+}
+
+.pdf-dropzone:hover {
+  border-color: #10B981;
+  background: #F0FDF4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+}
+
+.pdf-dropzone.drag-active {
+  border-color: #059669;
+  background: #ECFDF5;
+  transform: scale(1.01);
+}
+
+.pdf-dropzone.uploading {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.pdf-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-upload-icon-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #E8F5E9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  transition: transform 0.2s ease;
+}
+
+.pdf-dropzone:hover .pdf-upload-icon-circle {
+  transform: scale(1.08);
+}
+
+.pdf-dropzone-pills {
+  margin-top: 12px;
+}
+
+.drop-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #E2E8F0;
+}
+
+/* Card when PDF is attached */
+.pdf-ready-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1.5px solid #10B981;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+  flex-wrap: wrap;
+}
+
+.pdf-ready-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pdf-icon-badge {
+  position: relative;
+  width: 48px;
+  height: 52px;
+  background: #FEF2F2;
+  border: 1.5px solid #FCA5A5;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pdf-tag-tiny {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  background: #DC2626;
+  color: #FFFFFF;
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.pdf-file-details {
+  min-width: 0;
+}
+
+.pdf-file-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.pdf-size-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.pdf-status-hint {
+  font-size: 11.5px;
+  color: #059669;
+  margin: 3px 0 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.pdf-ready-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-pdf-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pdf-preview:hover {
+  background: #DBEAFE;
+}
+
+.btn-pdf-replace {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pdf-replace:hover {
+  background: #F1F5F9;
+}
+
+.btn-pdf-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  color: #E11D48;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pdf-remove:hover {
+  background: #FFE4E6;
+}
+
+/* Lightbox Modal for PDF Preview */
+.pdf-preview-lightbox {
+  width: 92vw;
+  max-width: 900px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+.pdf-lightbox-header {
+  padding: 12px 18px;
+  background: #0F172A;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-lightbox-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.btn-lightbox-action:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-lightbox-close {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.btn-lightbox-close:hover {
+  color: #FFFFFF;
+}
+
+.pdf-lightbox-body {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 50px);
+  background: #475569;
+}
+
+.pdf-lightbox-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.it-card-pdf-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(220, 38, 38, 0.92);
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.02em;
+  z-index: 2;
+}
+
+
 
 
 
