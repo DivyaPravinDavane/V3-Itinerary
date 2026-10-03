@@ -59,8 +59,37 @@ export function App() {
     return baseData;
   });
 
-  const [allItineraries, setAllItineraries] = useState<Itinerary[]>(FALLBACK_ALL_ITINERARIES);
-  const [popularDestinations, setPopularDestinations] = useState<Itinerary[]>(FALLBACK_POPULAR_DESTINATIONS);
+  const [allItineraries, setAllItineraries] = useState<Itinerary[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const local = localStorage.getItem('v3_custom_itineraries');
+        const custom: Itinerary[] = local ? JSON.parse(local) : [];
+        const deleted = new Set(JSON.parse(localStorage.getItem('v3_deleted_itinerary_ids') || '[]'));
+        const map = new Map<string, Itinerary>();
+        for (const it of FALLBACK_ALL_ITINERARIES) {
+          if (it && it.id && !deleted.has(it.id)) map.set(it.id, it);
+        }
+        for (const it of custom) {
+          if (it && it.id && !deleted.has(it.id)) map.set(it.id, it);
+        }
+        return Array.from(map.values());
+      } catch (e) {}
+    }
+    return FALLBACK_ALL_ITINERARIES;
+  });
+
+  const [popularDestinations, setPopularDestinations] = useState<Itinerary[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const local = localStorage.getItem('v3_custom_itineraries');
+        const custom: Itinerary[] = local ? JSON.parse(local) : [];
+        const customPopular = custom.filter(it => it.isPopular);
+        return [...customPopular, ...FALLBACK_POPULAR_DESTINATIONS];
+      } catch (e) {}
+    }
+    return FALLBACK_POPULAR_DESTINATIONS;
+  });
+
   const [destinationsMaster, setDestinationsMaster] = useState<Destination[]>([]);
   const [filteredDestinations, setFilteredDestinations] = useState<Itinerary[]>(FALLBACK_POPULAR_DESTINATIONS);
   const [isViewingAll, setIsViewingAll] = useState(false);
@@ -73,7 +102,7 @@ export function App() {
   });
   const [, setIsDataLoading] = useState(true);
 
-  // Dynamic Data Loader from MySQL
+  // Dynamic Data Loader from MySQL with local store synchronization
   const loadData = async () => {
     try {
       const [itinerariesData, destinationsData] = await Promise.all([
@@ -97,9 +126,21 @@ export function App() {
     }
   };
 
-  // Initial load
+  // Initial load and live sync listeners
   useEffect(() => {
     loadData();
+
+    const handleSync = () => {
+      loadData();
+    };
+    window.addEventListener('v3:itinerary_created', handleSync);
+    window.addEventListener('v3:itinerary_updated', handleSync);
+    window.addEventListener('v3:itinerary_deleted', handleSync);
+    return () => {
+      window.removeEventListener('v3:itinerary_created', handleSync);
+      window.removeEventListener('v3:itinerary_updated', handleSync);
+      window.removeEventListener('v3:itinerary_deleted', handleSync);
+    };
   }, []);
 
   // Save user profile state
