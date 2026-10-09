@@ -65,7 +65,7 @@ export const openRazorpayCheckout = ({
       amount: Math.round(amount * 100), // In paise (9900 paise = ₹99.00)
       currency: 'INR',
       name: 'V3Itinerary',
-      description: `${destination} Verified Travel Itinerary Blueprint`,
+      description: `${destination} Verified Travel Itinerary`,
       image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
       handler: function (response: any) {
         const pid = response.razorpay_payment_id || `pay_test_${Date.now()}`;
@@ -79,7 +79,7 @@ export const openRazorpayCheckout = ({
       notes: {
         destination: destination,
         orderId: generatedOrderId,
-        accessTier: 'Flat ₹99 Complete Itinerary Blueprint'
+        accessTier: 'Flat ₹99 Complete Itinerary Access'
       },
       theme: {
         color: '#0F2C59'

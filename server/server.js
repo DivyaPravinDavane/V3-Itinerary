@@ -146,7 +146,7 @@ app.post('/api/orders', async (req, res) => {
 
     const savedOrder = await insertOrder({
       orderId, itineraryId,
-      itineraryTitle: itineraryTitle || 'Complete Travel Blueprint',
+      itineraryTitle: itineraryTitle || 'Complete Travel Itinerary',
       destination: destination || 'Travel Destination',
       customerName: customerName || 'Valued Traveler',
       customerEmail: customerEmail || '',
@@ -211,7 +211,7 @@ app.post('/api/orders/initiate', async (req, res) => {
 
     const initiatedOrder = await initiateOrder({
       orderId, itineraryId,
-      itineraryTitle: itineraryTitle || 'Complete Travel Blueprint',
+      itineraryTitle: itineraryTitle || 'Complete Travel Itinerary',
       destination: destination || 'Travel Destination',
       customerName: customerName || 'Valued Traveler',
       customerEmail: customerEmail || '',

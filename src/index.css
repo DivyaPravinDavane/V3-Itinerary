@@ -1676,6 +1676,30 @@ a {
   background: linear-gradient(135deg, #0369A1 0%, #075985 100%);
 }
 
+.btn-pkg-view {
+  padding: 8px 15px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border: none;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-pkg-view:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(5, 150, 105, 0.45);
+  background: linear-gradient(135deg, #047857 0%, #065F46 100%);
+}
+
 /* ==========================================================================
    MIDDLE SECTION (3 Cards)
    ========================================================================== */
@@ -5716,6 +5740,16 @@ a {
     border-radius: 10px !important;
   }
 
+  .mmt-cell-val {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    position: relative !important;
+    width: 100% !important;
+    white-space: nowrap !important;
+  }
+
   .mmt-search-actions {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -8815,15 +8849,35 @@ a {
   text-transform: uppercase;
 }
 
+.mmt-cell-val {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  position: relative !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+}
+
+.mmt-dest-icon {
+  color: #0084FF !important;
+  flex-shrink: 0 !important;
+  min-width: 18px !important;
+}
+
 .mmt-search-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-size: 15px;
-  font-weight: 700;
-  color: #0F172A;
-  outline: none;
-  font-family: inherit;
+  flex: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  outline: none !important;
+  font-family: inherit !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .mmt-select-input {
@@ -12364,6 +12418,25 @@ a {
   0% { transform: scale(0.8); }
   50% { transform: scale(1.15); }
   100% { transform: scale(1); }
+}
+
+.purchased-corner-pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  color: #059669;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  z-index: 3;
 }
 
 .card-heart-btn.saved,

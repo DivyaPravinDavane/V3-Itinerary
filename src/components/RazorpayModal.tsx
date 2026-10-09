@@ -79,7 +79,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
           amount: Math.round(totalPayable * 100), // In paise (9900 paise = ₹99.00)
           currency: 'INR',
           name: 'V3 Itinerary',
-          description: `${itinerary.destination} Verified Itinerary Blueprint`,
+          description: `${itinerary.destination} Verified Travel Itinerary`,
           image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
           handler: function (response: any) {
             setIsProcessing(false);

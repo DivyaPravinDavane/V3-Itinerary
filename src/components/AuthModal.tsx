@@ -352,7 +352,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Sign In to V3Itinerary
           </h3>
           <p className="auth-v3-subtitle">
-            Select your portal to manage trips, blueprints, or platform operations
+            Select your portal to manage trips, itineraries, or platform operations
           </p>
         </div>
 

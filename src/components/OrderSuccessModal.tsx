@@ -52,21 +52,21 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             <CheckCircle2 size={38} className="text-emerald-500" />
           </div>
           <h2 className="fulfillment-title">Payment Successful!</h2>
-          <p className="fulfillment-sub">Your digital travel blueprint has been unlocked and bound to your account.</p>
+          <p className="fulfillment-sub">Your digital travel itinerary has been unlocked and bound to your account.</p>
           <div className="order-pill-tag font-mono">Order Ref: {order.orderId}</div>
         </div>
 
         {/* Download & Connect Actions Row */}
         <div className="fulfillment-action-cards">
-          {/* Action 1: Instant PDF Blueprint Download */}
+          {/* Action 1: Instant PDF Itinerary Download */}
           <div className="fulfillment-card pdf-card">
             <div className="card-top-icon">
               <FileText size={24} className="text-blue-600" />
             </div>
-            <h3 className="card-h">Instant PDF Blueprint</h3>
+            <h3 className="card-h">Instant PDF Itinerary</h3>
             <p className="card-p">Download the complete day-by-day itinerary with exact timings, hotel options, and routes for offline travel.</p>
             <button className="btn-action-primary" onClick={handleDownloadPDF}>
-              <Download size={17} /> Download Blueprint (PDF)
+              <Download size={17} /> Download Itinerary (PDF)
             </button>
           </div>
 

@@ -5,14 +5,18 @@ interface FooterProps {
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
   onSelectDestination: (name: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations') => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio') => void;
+  onOpenAgentDashboard?: () => void;
+  isAgent?: boolean;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAgentModal,
   onScrollToSection,
   onSelectDestination,
-  onNavigatePage
+  onNavigatePage,
+  onOpenAgentDashboard,
+  isAgent
 }) => {
   return (
     <footer className="site-footer" id="footer">
@@ -34,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({
             />
           </div>
           <p className="footer-about-p">
-            India's premier marketplace for verified travel itineraries. We empower certified travel experts to monetize crafted travel blueprints while protecting travelers from generic AI hallucinations and unvetted tour scams.
+            India's trusted platform for verified travel itineraries. We connect travelers with certified local travel agents to get authentic, ready-to-use trip plans for just ₹99.
           </p>
           <div className="footer-gst-badge">
             <ShieldCheck size={16} className="text-emerald-400" />
@@ -44,7 +48,7 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Col 2: Top Destinations */}
         <div className="footer-col">
-          <h4 className="footer-col-title">Popular Blueprints</h4>
+          <h4 className="footer-col-title">Popular Itineraries</h4>
           <ul className="footer-links-list">
             <li><button onClick={() => onSelectDestination('Dubai')}>Dubai Luxury & Desert Safari</button></li>
             <li><button onClick={() => onSelectDestination('Maldives')}>Maldives Overwater Villa</button></li>
@@ -62,7 +66,7 @@ export const Footer: React.FC<FooterProps> = ({
           </ul>
         </div>
 
-        {/* Col 3: Quick Links */}
+        {/* Col 3: Platform, Agents & About */}
         <div className="footer-col">
           <h4 className="footer-col-title">Platform & Agents</h4>
           <ul className="footer-links-list">
@@ -82,10 +86,24 @@ export const Footer: React.FC<FooterProps> = ({
                 Explore All Destinations
               </button>
             </li>
+            <li>
+              <button onClick={() => {
+                if (isAgent && onNavigatePage) {
+                  onNavigatePage('agent-studio');
+                } else if (isAgent && onOpenAgentDashboard) {
+                  onOpenAgentDashboard();
+                } else {
+                  onOpenAgentModal();
+                }
+              }}>
+                Agent Studio (Partner Portal)
+              </button>
+            </li>
             <li><button onClick={onOpenAgentModal}>For Travel Agents (Join with GSTIN)</button></li>
             <li><button onClick={() => onScrollToSection('how-it-works')}>How It Works (4 Steps)</button></li>
-            <li><button onClick={() => onScrollToSection('trust-pillars')}>Buyer Protection & Trust</button></li>
-            <li><a href="#transparency">Pricing Transparency (₹99 Rule)</a></li>
+            <li><button onClick={() => onScrollToSection('trust-pillars')}>About Us & Buyer Protection</button></li>
+            <li><button onClick={() => onScrollToSection('trust-pillars')}>Pricing Transparency (₹99 Rule)</button></li>
+            <li><button onClick={() => onScrollToSection('footer')}>Contact Customer Concierge</button></li>
           </ul>
         </div>
 

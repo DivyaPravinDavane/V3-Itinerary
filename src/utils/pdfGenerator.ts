@@ -24,7 +24,7 @@ function buildItineraryDoc(itinerary: Itinerary, order: OrderRecord, customerNam
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Verified • Value • Variety — Certified Digital Travel Blueprint', margin, 18);
+  doc.text('Verified • Value • Variety — Verified Digital Travel Itinerary', margin, 18);
 
   doc.setFontSize(8);
   doc.text(`Order Ref: ${order.orderId}  |  GSTIN: ${itinerary.agent.gstNumber}`, pageWidth - margin, 12, { align: 'right' });
@@ -180,9 +180,9 @@ function buildItineraryDoc(itinerary: Itinerary, order: OrderRecord, customerNam
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(180, 83, 9);
-  doc.text('Non-Deceptive Pricing Guardrail (PRD Rule 11):', margin + 4, y + 5);
+  doc.text('Clear Pricing Guarantee:', margin + 4, y + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('₹99 is the nominal digital blueprint fee. On-ground hotel bookings, flights and cabs are customized directly with the verified agent.', margin + 4, y + 10);
+  doc.text('₹99 is the digital itinerary fee. On-ground hotel bookings, flights and cabs are planned directly with the verified agent.', margin + 4, y + 10);
 
   // Footer on all pages
   const totalPages = doc.internal.pages.length - 1;

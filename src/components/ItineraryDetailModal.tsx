@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   X, Clock, Users, Heart, Star, Lock,
-  ShieldCheck, Download, CheckCircle2,
-  Calendar, CreditCard, ChevronDown, ChevronUp, FileText, ExternalLink
+  ShieldCheck, Download,
+  Calendar, CreditCard, ChevronDown, ChevronUp, FileText
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
-import { generateItineraryPDF, createItineraryPDFBlobUrl } from '../utils/pdfGenerator';
+import { generateItineraryPDF } from '../utils/pdfGenerator';
 
 interface ItineraryDetailModalProps {
   itinerary: Itinerary | null;
@@ -29,54 +29,20 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
   isPurchased,
   order,
   customerName = 'Valued Traveler',
-  customerEmail = 'rahul.sharma@example.com'
+  customerEmail: _customerEmail = 'rahul.sharma@example.com'
 }) => {
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
 
-  // Generate PDF preview blob URL whenever purchased (or use agent uploaded PDF)
-  useEffect(() => {
-    if (isPurchased && itinerary) {
-      if (itinerary.pdfUrl) {
-        setPdfBlobUrl(itinerary.pdfUrl);
-        return;
-      }
-
-      const activeOrder: OrderRecord = order || {
-        orderId: `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-99`,
-        itineraryId: itinerary.id,
-        itineraryTitle: itinerary.title,
-        destination: itinerary.destination,
-        amountPaid: 99.00,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        paymentMethod: 'UPI (Razorpay Verified)',
-        razorpayPaymentId: 'pay_unlocked_blueprint',
-        agentName: itinerary.agent?.agencyName || 'V3 Curators',
-        agentPhone: itinerary.agent?.phone || '+91 98203 89694',
-        agentWhatsapp: itinerary.agent?.whatsapp || '+91 98203 89694',
-        agentEmail: itinerary.agent?.email || 'support@v3itinerary.com'
-      };
-
-      try {
-        const url = createItineraryPDFBlobUrl(itinerary, activeOrder, customerName);
-        setPdfBlobUrl(url);
-        return () => {
-          URL.revokeObjectURL(url);
-        };
-      } catch (e) {
-        console.error("PDF Blob generation error:", e);
-      }
-    }
-  }, [isPurchased, itinerary, order, customerName]);
-
   if (!itinerary) return null;
+
+  const hasPurchased = isPurchased || Boolean(order) || (itinerary.accessPrice ?? 99) === 0;
 
   const handleDownloadPDF = () => {
     if (itinerary?.pdfUrl) {
       const link = document.createElement('a');
       link.href = itinerary.pdfUrl;
-      link.download = itinerary.pdfName || `${itinerary.destination}_Itinerary_Blueprint.pdf`;
+      link.download = itinerary.pdfName || `${itinerary.destination}_Itinerary_Plan.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -91,7 +57,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
       amountPaid: 99.00,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       paymentMethod: 'UPI (Razorpay Verified)',
-      razorpayPaymentId: 'pay_unlocked_blueprint',
+      razorpayPaymentId: 'pay_unlocked_itinerary',
       agentName: itinerary.agent?.agencyName || 'V3 Curators',
       agentPhone: itinerary.agent?.phone || '+91 98203 89694',
       agentWhatsapp: itinerary.agent?.whatsapp || '+91 98203 89694',
@@ -182,7 +148,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
           <div className="split-right-content-col">
             {/* Header Title */}
             <div className="content-header-block">
-              <span className="content-dest-tag">{itinerary.destination} Verified Blueprint</span>
+              <span className="content-dest-tag">{itinerary.destination} Verified Itinerary</span>
               <h2 className="content-package-title">{itinerary.title}</h2>
             </div>
 
@@ -211,16 +177,16 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                   <div className="budget-val">₹{itinerary.estimatedTripCost.toLocaleString('en-IN')}</div>
                 </div>
                 <div className="text-right">
-                  <span className="budget-lbl">Itinerary Blueprint Fee:</span>
+                  <span className="budget-lbl">Itinerary Access Fee:</span>
                   <div className="price-val">₹99 <span className="text-xs font-normal text-slate-500">(Flat)</span></div>
                 </div>
               </div>
             </div>
 
             {/* =========================================================================
-                BEFORE PAYMENT: PUT RAZORPAY TO VIEW THE FULL ITINERARY
+                BEFORE PAYMENT: PUT RAZORPAY TO VIEW THE FULL ITINERARY (IF NOT PAID)
                 ========================================================================= */}
-            {!isPurchased ? (
+            {!hasPurchased ? (
               <div className="razorpay-unlock-box">
                 {itinerary.pdfUrl ? (
                   <div className="p-3 mb-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center gap-3">
@@ -266,7 +232,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                     id="btn-split-pay-razorpay"
                   >
                     <CreditCard size={18} />
-                    <span>Pay ₹99 to View Full Itinerary</span>
+                    <span>Buy Now • ₹99</span>
                   </button>
 
                   <p className="rzp-guarantee-note">
@@ -276,88 +242,39 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
               </div>
             ) : (
               /* =========================================================================
-                  AFTER PAYMENT: THE PDF SHOULD BE SEEN AS REQUESTED!
+                  AFTER PAYMENT: DOWNLOAD BLUEPRINT (NO EMBEDDED IFRAME VIEWER)
                   ========================================================================= */
               <div className="pdf-unlocked-container animate-fade-in">
-                <div className="pdf-success-banner">
-                  <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-emerald-950 text-sm">Payment Verified! Blueprint PDF Unlocked</h4>
-                    <p className="text-xs text-emerald-800">
-                      📧 Dispatched to <strong>{customerEmail}</strong> (Check inbox & spam) • Live blueprint ready to view & download below:
-                    </p>
-                  </div>
-                </div>
 
-                {/* PDF Viewer / Preview Card (The PDF is Seen!) */}
-                <div className="pdf-viewer-card">
-                  <div className="pdf-card-header">
+                {/* PDF Download Card (Clean button, no iframe!) */}
+                <div className="pdf-viewer-card p-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 truncate">
                       <FileText size={18} className="text-red-600 shrink-0" />
                       <span className="font-bold text-slate-800 text-sm truncate">
-                        {itinerary.pdfName || `${itinerary.destination}_Itinerary_Blueprint.pdf`}
+                        {itinerary.pdfName || `${itinerary.destination}_Itinerary_Plan.pdf`}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {itinerary.pdfUrl && (
-                        <a 
-                          href={itinerary.pdfUrl} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="btn-pdf-download-action"
-                          style={{ background: '#F1F5F9', color: '#334155' }}
-                          title="Open PDF in Full Screen"
-                        >
-                          <ExternalLink size={14} />
-                          <span>Full Screen</span>
-                        </a>
-                      )}
-                      <button 
-                        className="btn-pdf-download-action"
-                        onClick={handleDownloadPDF}
-                      >
-                        <Download size={15} />
-                        <span>Download PDF</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Embedded PDF iframe viewer if available */}
-                  {pdfBlobUrl ? (
-                    <div className="pdf-embed-wrapper">
-                      <iframe 
-                        src={pdfBlobUrl} 
-                        className="pdf-iframe-view"
-                        title={`${itinerary.destination} Travel Itinerary PDF`}
-                      />
-                    </div>
-                  ) : (
-                    <div className="pdf-fallback-box">
-                      <FileText size={36} className="text-blue-600 mb-2" />
-                      <div className="font-bold text-sm text-slate-800">Complete Offline Blueprint PDF Ready</div>
-                      <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                        Click download below to save the complete day-by-day itinerary with timings, maps, and hotel links.
-                      </p>
-                      <button 
-                        className="btn-pdf-download-large mt-3"
-                        onClick={handleDownloadPDF}
-                      >
-                        <Download size={16} />
-                        <span>Download Itinerary (PDF)</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Full Itinerary On-Screen Toggle */}
-                  <div className="pdf-toggle-full-wrap">
                     <button 
-                      className="btn-toggle-schedule"
-                      onClick={() => setShowFullSchedule(!showFullSchedule)}
+                      className="btn-pdf-download-action"
+                      onClick={handleDownloadPDF}
                     >
-                      <span>{showFullSchedule ? "Hide On-Screen Schedule" : "Or View Full Day-by-Day Details On-Screen"}</span>
-                      {showFullSchedule ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      <Download size={15} />
+                      <span>Download PDF</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* Full Itinerary On-Screen Toggle */}
+                <div className="pdf-toggle-full-wrap">
+                  <button 
+                    className="btn-toggle-schedule"
+                    onClick={() => setShowFullSchedule(!showFullSchedule)}
+                  >
+                    <span>{showFullSchedule ? "Hide On-Screen Schedule" : "View Full Day-by-Day Details On-Screen"}</span>
+                    {showFullSchedule ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
 
                     {showFullSchedule && (
                       <div className="unlocked-schedule-dropdown animate-slide-down">
@@ -397,7 +314,6 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                     )}
                   </div>
                 </div>
-              </div>
             )}
           </div>
         </div>

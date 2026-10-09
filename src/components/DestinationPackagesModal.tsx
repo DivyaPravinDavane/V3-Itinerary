@@ -26,6 +26,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
   isPurchased,
   onClose,
   onSelectPackage,
+  onPayToView,
   onToggleSave,
   onSelectDestination,
   backLabel
@@ -111,14 +112,41 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
         <div className="mmt-search-container">
           <div className="mmt-input-cell dest-cell">
             <label className="mmt-cell-lbl">DESTINATION, CITY OR ATTRACTION</label>
-            <div className="mmt-cell-val flex items-center gap-1.5 relative">
-              <MapPin size={16} className="text-blue-600 shrink-0" />
+            <div 
+              className="mmt-cell-val"
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '8px',
+                position: 'relative',
+                width: '100%',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <MapPin 
+                size={18} 
+                className="mmt-dest-icon" 
+                style={{ color: '#0084FF', flexShrink: 0 }} 
+              />
               <input 
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Enter destination, city, or attraction..."
                 className="mmt-search-input"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  outline: 'none',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: '#0F172A',
+                  padding: searchInput ? '0 24px 0 0' : '0',
+                  margin: 0
+                }}
               />
               {searchInput && (
                 <button
@@ -126,6 +154,10 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                   onClick={() => setSearchInput('')}
                   className="mmt-search-clear-btn"
                   title="Clear search"
+                  style={{
+                    position: 'absolute',
+                    right: '6px'
+                  }}
                 >
                   <X size={14} />
                 </button>
@@ -189,7 +221,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
 
           {/* Price Filter Box */}
           <div className="filter-group-box">
-            <div className="filter-group-title">Itinerary Blueprint Price</div>
+            <div className="filter-group-title">Itinerary Price</div>
             <div className="price-range-callout">
               <span className="price-min">₹99 Flat</span>
               <span className="price-tag-sub">Taxes Included</span>
@@ -252,7 +284,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
           {/* Trust Assurance Card */}
           <div className="sidebar-trust-box">
             <ShieldCheck size={20} className="text-emerald-600 mb-1" />
-            <div className="font-bold text-xs text-slate-800">100% Verified Blueprints</div>
+            <div className="font-bold text-xs text-slate-800">100% Verified Plans</div>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-normal">
               Includes hour-by-hour routing, discount booking links, and offline PDF guide.
             </p>
@@ -280,7 +312,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                   Looking for &ldquo;{otherDestinationMatch.matchedCity || searchInput}&rdquo;?
                 </h3>
                 <p className="text-slate-600 max-w-md mx-auto mb-5 text-sm">
-                  {otherDestinationMatch.matchedCity || searchInput} is located in <strong>{otherDestinationMatch.destination}</strong>! We have handcrafted travel blueprints ready for it.
+                  {otherDestinationMatch.matchedCity || searchInput} is located in <strong>{otherDestinationMatch.destination}</strong>! We have handcrafted travel itineraries ready for it.
                 </p>
                 {onSelectDestination ? (
                   <button 
@@ -306,7 +338,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                   <MapPin size={28} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-800 mb-2">
-                  Curating New Blueprints for {destinationName}
+                  Preparing New Itineraries for {destinationName}
                 </h3>
                 <p className="text-slate-600 max-w-md mx-auto mb-6 text-sm">
                   Our verified travel specialists are putting together turn-by-turn day-by-day itineraries for {destinationName}. Check back shortly or explore our other top destinations!
@@ -408,24 +440,59 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
 
                       {/* Card Bottom Pricing & Action */}
                       <div className="mmt-card-footer">
-                        <div className="mmt-savings-tag">
-                          You save 42%
-                        </div>
+                        {!hasPurchased && (
+                          <div className="mmt-savings-tag">
+                            You save 42%
+                          </div>
+                        )}
 
                         <div className="mmt-price-cta-row">
                           <div className="mmt-price-col">
-                            <span className="mmt-orig-price">From ₹1,804</span>
-                            <div className="mmt-active-price">
-                              <span className="curr">₹</span>
-                              <span className="amt">99</span>
-                              <span className="unit">per package</span>
-                            </div>
+                            {hasPurchased ? (
+                              <div className="mmt-active-price">
+                                <span className="amt" style={{ color: '#059669', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <CheckCircle2 size={14} className="text-emerald-600 inline" /> Paid & Unlocked
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="mmt-orig-price">From ₹1,804</span>
+                                <div className="mmt-active-price">
+                                  <span className="curr">₹</span>
+                                  <span className="amt">99</span>
+                                  <span className="unit">per package</span>
+                                </div>
+                              </>
+                            )}
                           </div>
 
-                          <div className="mmt-action-indicator">
-                            <span>View Summary</span>
-                            <ChevronRight size={15} />
-                          </div>
+                          {hasPurchased ? (
+                            <button 
+                              className="btn-pkg-view"
+                              style={{ fontSize: '11px', padding: '6px 14px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectPackage(pkg);
+                              }}
+                            >
+                              View Itinerary
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn-pkg-buy"
+                              style={{ fontSize: '11px', padding: '6px 14px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onPayToView) {
+                                  onPayToView(pkg);
+                                } else {
+                                  onSelectPackage(pkg);
+                                }
+                              }}
+                            >
+                              Buy Now
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

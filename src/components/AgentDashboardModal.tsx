@@ -117,7 +117,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   };
 
   const myOwnedItineraries = allItineraries.filter(it => isAgentOwnedItinerary(it));
-  const myBlueprintsCount = myOwnedItineraries.length;
+  const myItinerariesCount = myOwnedItineraries.length;
   const myItineraryIds = new Set(myOwnedItineraries.map(it => String(it.id).toLowerCase().trim()));
   const myItinerarySlugs = new Set(myOwnedItineraries.map(it => String(it.slug || '').toLowerCase().trim()).filter(Boolean));
   const myItineraryTitles = new Set(myOwnedItineraries.map(it => it.title.toLowerCase().trim()));
@@ -360,7 +360,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
         whatsapp: agentWhatsapp,
         email: agentEmail,
         avatarUrl: user.agentDetails?.logoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        itinerariesPublished: myBlueprintsCount + 1
+        itinerariesPublished: myItinerariesCount + 1
       },
       days: formData.days,
       hotels: formData.hotels,
@@ -553,7 +553,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
               <FileText size={18} />
             </div>
             <div className="kpi-info">
-              <span className="kpi-val">{myBlueprintsCount}</span>
+              <span className="kpi-val">{myItinerariesCount}</span>
               <span className="kpi-lbl">My Itineraries</span>
             </div>
           </div>
@@ -638,7 +638,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 <div className="agent-scope-badge-wrap flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
                     <ShieldCheck size={14} className="text-emerald-600" />
-                    Private Agency Workspace ({myBlueprintsCount} {myBlueprintsCount === 1 ? 'Itinerary' : 'Itineraries'})
+                    Private Agency Workspace ({myItinerariesCount} {myItinerariesCount === 1 ? 'Itinerary' : 'Itineraries'})
                   </span>
                 </div>
 
@@ -662,7 +662,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 <FileText size={48} className="text-slate-300 mb-3" />
                 <h4 className="text-base font-bold text-slate-700">No Itineraries in Your Agency Studio</h4>
                 <p className="text-xs text-slate-500 max-w-md mt-1 mb-4">
-                  {myBlueprintsCount === 0 
+                  {myItinerariesCount === 0 
                     ? "You haven't created any itineraries for your agency yet. Each travel agent's workspace is private and isolated. Click below to add your first travel itinerary!"
                     : "No itineraries in your portfolio matched your search criteria."}
                 </p>
@@ -1291,7 +1291,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                   </div>
                   <div className="flex justify-between py-1.5 border-b">
                     <span className="text-slate-400">V3 Verified Itineraries:</span>
-                    <span className="font-semibold text-emerald-700">{myBlueprintsCount} Active</span>
+                    <span className="font-semibold text-emerald-700">{myItinerariesCount} Active</span>
                   </div>
                 </div>
               </div>

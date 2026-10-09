@@ -179,7 +179,7 @@ export const CustomerDashboardModal: React.FC<CustomerDashboardModalProps> = ({
                               if (it.pdfUrl) {
                                 const link = document.createElement('a');
                                 link.href = it.pdfUrl;
-                                link.download = it.pdfName || `${it.destination}_Itinerary_Blueprint.pdf`;
+                                link.download = it.pdfName || `${it.destination}_Itinerary_Plan.pdf`;
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);

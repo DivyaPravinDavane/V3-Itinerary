@@ -258,7 +258,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
         const targetId = primaryIt ? primaryIt.id : (m.id || destSlug);
         const meta = DESTINATION_META[destName] || {
           vibes: ['explore'],
-          desc: m.tagline || m.description || primaryIt?.overview || 'Handcrafted holiday packages and verified daily blueprints.',
+          desc: m.tagline || m.description || primaryIt?.overview || 'Handcrafted holiday packages and verified travel itineraries.',
           bestTime: m.best_time_to_visit || m.bestTimeToVisit || primaryIt?.bestTimeToVisit || 'October to March'
         };
 
@@ -307,7 +307,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
         const destSlug = `dest-${key.replace(/\s+/g, '-')}`;
         const meta = DESTINATION_META[destName] || {
           vibes: ['explore'],
-          desc: it.overview || 'Handcrafted holiday packages and verified daily blueprints.',
+          desc: it.overview || 'Handcrafted holiday packages and verified travel itineraries.',
           bestTime: it.bestTimeToVisit || 'October to March'
         };
 
@@ -473,7 +473,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
           </h1>
 
           <p className="dest-page-hero-sub">
-            Explore {counts.total} handpicked vacation spots across India and the globe. Every destination features turn-by-turn blueprints with hourly timings, hotel recommendations, and certified GST travel agents for just ₹99.
+            Explore {counts.total} handpicked vacation spots across India and the globe. Every destination features day-by-day itineraries with detailed timings, hotel recommendations, and certified GST travel agents for just ₹99.
           </p>
 
           {/* Quick Search Form with Live Dropdown & Smooth Scroll */}
@@ -522,7 +522,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
               <div className="dest-search-live-dropdown shadow-2xl animate-fade-in">
                 <div className="dest-dropdown-header">
                   <span>Matching Destinations for &ldquo;{searchQuery}&rdquo;:</span>
-                  <span className="dest-dropdown-hint">Click to view blueprints</span>
+                  <span className="dest-dropdown-hint">Click to view itineraries</span>
                 </div>
                 <div className="dest-dropdown-list">
                   {filteredDestinations.slice(0, 5).map(item => (
@@ -560,7 +560,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                           handleDropdownSelect(item.name, true);
                         }}
                       >
-                        <span>View Blueprints</span>
+                        <span>View Itineraries</span>
                         <ArrowRight size={13} />
                       </button>
                     </div>
@@ -606,7 +606,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
             </div>
             <div className="dest-stat-chip">
               <span className="font-bold text-white">₹99</span>
-              <span>Flat Transparent Blueprint Fee</span>
+              <span>Flat Transparent Fee</span>
             </div>
           </div>
         </div>
@@ -652,7 +652,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
               >
                 <option value="popular">Most Popular</option>
                 <option value="name">Destination (A - Z)</option>
-                <option value="packages">Most Blueprints Available</option>
+                <option value="packages">Most Itineraries Available</option>
               </select>
             </div>
           </div>
@@ -744,7 +744,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                     <span>: <strong>{filteredDestinations[0].name}</strong> ({filteredDestinations[0].country})</span>
                   </div>
                   <p className="dest-search-redirect-sub">
-                    {filteredDestinations[0].itineraryCount} verified {filteredDestinations[0].itineraryCount === 1 ? 'blueprint' : 'blueprints'} available{filteredDestinations[0].matchedCity ? ` covering ${filteredDestinations[0].matchedCity}` : ''}. Click to view all packages directly.
+                    {filteredDestinations[0].itineraryCount} verified {filteredDestinations[0].itineraryCount === 1 ? 'itinerary' : 'itineraries'} available{filteredDestinations[0].matchedCity ? ` covering ${filteredDestinations[0].matchedCity}` : ''}. Click to view all packages directly.
                   </p>
                 </div>
               </div>
@@ -819,7 +819,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                         onSelectDestination(dest.name);
                       }
                     }}
-                    title={`View travel blueprints for ${dest.name}`}
+                    title={`View travel itineraries for ${dest.name}`}
                   >
                     {/* Media Cover */}
                     <div className="dest-card-media">
@@ -878,7 +878,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                           </div>
                         </div>
                         <div className="dest-card-price-pill">
-                          <span className="dest-card-price-label">Blueprints from</span>
+                          <span className="dest-card-price-label">From</span>
                           <span className="dest-card-price-val">₹{dest.startingPrice}</span>
                         </div>
                       </div>
@@ -914,7 +914,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                           <span className="dest-meta-val">{dest.bestTimeToVisit}</span>
                         </div>
                         <div className="dest-meta-item text-right">
-                          <span className="dest-meta-label">Available Blueprints</span>
+                          <span className="dest-meta-label">Available Plans</span>
                           <span className="dest-meta-val font-semibold text-blue-700">
                             {dest.itineraryCount} {dest.itineraryCount === 1 ? 'Package' : 'Packages'}
                           </span>
@@ -953,7 +953,7 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
               </div>
               <div>
                 <h4 className="assurance-title">100% Verified Planners</h4>
-                <p className="assurance-text">Every blueprint is authored by government GST-verified travel agents with local ground knowledge.</p>
+                <p className="assurance-text">Every itinerary is crafted by government GST-verified travel agents with local ground knowledge.</p>
               </div>
             </div>
 
@@ -962,8 +962,8 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
                 <CheckCircle2 size={24} />
               </div>
               <div>
-                <h4 className="assurance-title">No AI Hallucinations</h4>
-                <p className="assurance-text">Real transit durations, recommended timings, verified ticket links and reliable hotel suggestions.</p>
+                <h4 className="assurance-title">100% Real Travel Plans</h4>
+                <p className="assurance-text">Real travel times, exact timings, verified booking links, and trusted hotel recommendations from local experts.</p>
               </div>
             </div>
 

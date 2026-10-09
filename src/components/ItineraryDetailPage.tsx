@@ -6,7 +6,7 @@ import {
   MapPin, Phone, MessageCircle, Mail, IndianRupee, Hotel, Sparkles, Share2
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
-import { generateItineraryPDF, createItineraryPDFBlobUrl } from '../utils/pdfGenerator';
+import { generateItineraryPDF } from '../utils/pdfGenerator';
 
 interface ItineraryDetailPageProps {
   itinerary: Itinerary;
@@ -33,44 +33,16 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
   customerEmail = 'rahul.sharma@example.com',
   onBackToDestinations
 }) => {
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [showFullSchedule, setShowFullSchedule] = useState(true);
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
   const [copied, setCopied] = useState(false);
 
-  // Generate PDF preview blob URL whenever purchased
+  const hasPurchased = isPurchased || Boolean(order) || (itinerary.accessPrice ?? 99) === 0;
+
+  // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [itinerary.id]);
-
-  useEffect(() => {
-    if (isPurchased && itinerary) {
-      const activeOrder: OrderRecord = order || {
-        orderId: `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-99`,
-        itineraryId: itinerary.id,
-        itineraryTitle: itinerary.title,
-        destination: itinerary.destination,
-        amountPaid: 99.00,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        paymentMethod: 'UPI (Razorpay Verified)',
-        razorpayPaymentId: 'pay_unlocked_blueprint',
-        agentName: itinerary.agent?.agencyName || 'V3 Curators',
-        agentPhone: itinerary.agent?.phone || '+91 98203 89694',
-        agentWhatsapp: itinerary.agent?.whatsapp || '+91 98203 89694',
-        agentEmail: itinerary.agent?.email || 'support@v3itinerary.com'
-      };
-
-      try {
-        const url = createItineraryPDFBlobUrl(itinerary, activeOrder, customerName);
-        setPdfBlobUrl(url);
-        return () => {
-          URL.revokeObjectURL(url);
-        };
-      } catch (e) {
-        console.error("PDF Blob generation error:", e);
-      }
-    }
-  }, [isPurchased, itinerary, order, customerName]);
 
   const handleDownloadPDF = () => {
     const activeOrder: OrderRecord = order || {
@@ -81,7 +53,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
       amountPaid: 99.00,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       paymentMethod: 'UPI (Razorpay Verified)',
-      razorpayPaymentId: 'pay_unlocked_blueprint',
+      razorpayPaymentId: 'pay_unlocked_itinerary',
       agentName: itinerary.agent?.agencyName || 'V3 Curators',
       agentPhone: itinerary.agent?.phone || '+91 98203 89694',
       agentWhatsapp: itinerary.agent?.whatsapp || '+91 98203 89694',
@@ -182,7 +154,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
             <div className="itinerary-content-card shadow-sm">
               <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
-                  {itinerary.destination} Verified Itinerary Blueprint
+                  {itinerary.destination} Verified Travel Itinerary
                 </span>
                 <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
                   <Star size={14} fill="#F59E0B" stroke="#F59E0B" />
@@ -384,7 +356,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="itinerary-content-card shadow-sm">
                 <h4 className="font-bold text-sm text-slate-900 mb-2 text-emerald-700 flex items-center gap-1.5">
-                  <CheckCircle2 size={16} /> Included in this Blueprint
+                  <CheckCircle2 size={16} /> Included in this Itinerary
                 </h4>
                 <ul className="space-y-1.5 text-xs text-slate-700">
                   {itinerary.inclusions.map((inc, i) => (
@@ -418,7 +390,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
           <div className="itinerary-sidebar-col">
             <div className="sticky-sidebar-box">
               
-              {!isPurchased ? (
+              {!hasPurchased ? (
                 /* BEFORE PURCHASE: RAZORPAY CHECKOUT CARD */
                 <div className="sidebar-checkout-card shadow-lg">
                   <div className="sidebar-badge-strip">
@@ -427,7 +399,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                   </div>
 
                   <div className="sidebar-price-block">
-                    <span className="price-lbl">Complete Blueprint Access</span>
+                    <span className="price-lbl">Complete Itinerary Access</span>
                     <div className="sidebar-active-price">
                       <span className="currency">₹</span>
                       <span className="amount">99</span>
@@ -443,7 +415,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                     </div>
                     <div className="feat-item">
                       <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                      <span>Downloadable Offline PDF Blueprint</span>
+                      <span>Downloadable Offline PDF Itinerary</span>
                     </div>
                     <div className="feat-item">
                       <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
@@ -461,7 +433,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                     id="btn-sidebar-pay-razorpay"
                   >
                     <CreditCard size={18} />
-                    <span>Pay ₹99 to Unlock Full Itinerary & PDF</span>
+                    <span>Buy Now • ₹99</span>
                   </button>
 
                   <p className="sidebar-note">
@@ -474,7 +446,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                   <div className="unlocked-banner">
                     <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
                     <div>
-                      <h4 className="font-bold text-xs text-emerald-950">Blueprint Unlocked!</h4>
+                      <h4 className="font-bold text-xs text-emerald-950">Itinerary Unlocked!</h4>
                       <p className="text-[11px] text-emerald-800">Emailed to {customerEmail}</p>
                     </div>
                   </div>
@@ -482,7 +454,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                   <div className="sidebar-pdf-preview-box">
                     <FileText size={36} className="text-blue-600 mb-2" />
                     <div className="font-bold text-xs text-slate-800 text-center">
-                      {itinerary.destination}_Itinerary_Blueprint.pdf
+                      {itinerary.destination}_Itinerary_Plan.pdf
                     </div>
                     <button 
                       className="btn-download-pdf-sidebar mt-3 shadow"
@@ -493,16 +465,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                     </button>
                   </div>
 
-                  {/* Embedded PDF iframe if available */}
-                  {pdfBlobUrl && (
-                    <div className="sidebar-pdf-embed-wrapper mt-3">
-                      <iframe 
-                        src={pdfBlobUrl} 
-                        className="w-full h-80 rounded-lg border border-slate-200"
-                        title={`${itinerary.destination} Itinerary PDF`}
-                      />
-                    </div>
-                  )}
+
 
                   {itinerary.agent && (
                     <div className="agent-connect-card mt-3">
@@ -529,7 +492,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                 <ShieldCheck size={20} className="text-emerald-600 mb-1" />
                 <div className="font-bold text-xs text-slate-800">100% Verified Platform Guarantee</div>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-normal">
-                  All blueprints authored by GST-verified registered travel planners.
+                  All itineraries crafted by GST-verified registered travel planners.
                 </p>
               </div>
 

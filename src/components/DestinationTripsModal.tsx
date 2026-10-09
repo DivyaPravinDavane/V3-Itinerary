@@ -51,7 +51,7 @@ export const DestinationTripsModal: React.FC<DestinationTripsModalProps> = ({
               <MapPin size={14} />
               <span>{heroTrip?.country || 'Featured Destination'}</span>
             </div>
-            <h2 className="dest-trips-title">{destinationName} Travel Blueprints</h2>
+            <h2 className="dest-trips-title">{destinationName} Travel Itineraries</h2>
             <p className="dest-trips-sub">
               Compare verified local travel agencies, trip durations, and daily schedules
             </p>

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { 
   ChevronLeft, ChevronRight, Heart, ArrowRight, Clock, 
-  Search, RotateCcw, Star, ShieldCheck, MapPin, Users
+  Search, RotateCcw, Star, ShieldCheck, MapPin, Users, CheckCircle2
 } from 'lucide-react';
 import type { Itinerary, Destination } from '../types';
 
@@ -17,6 +17,7 @@ interface PopularDestinationsProps {
   destinations: Itinerary[];
   destinationsMaster?: Destination[];
   savedIds: string[];
+  isPurchased?: (itineraryId: string) => boolean;
   searchFilter: SearchFilterState;
   isViewingAll: boolean;
   onClearSearch: () => void;
@@ -34,6 +35,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
   destinations,
   destinationsMaster,
   savedIds,
+  isPurchased,
   searchFilter,
   isViewingAll,
   onClearSearch,
@@ -92,10 +94,10 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
     } else {
       sectionTitle = 'Filtered Itinerary Results';
     }
-    sectionSubtitle = `Found ${destinations.length} verified ${destinations.length === 1 ? 'travel blueprint' : 'travel blueprints'} matching your criteria`;
+    sectionSubtitle = `Found ${destinations.length} verified ${destinations.length === 1 ? 'travel itinerary' : 'travel itineraries'} matching your criteria`;
   } else if (isViewingAll) {
     sectionTitle = `All Curated Travel Itineraries (${destinations.length})`;
-    sectionSubtitle = 'Browse complete verified travel blueprints from certified agents across India & worldwide';
+    sectionSubtitle = 'Browse complete verified travel itineraries from certified agents across India & worldwide';
   }
 
   return (
@@ -147,7 +149,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                   </button>
                 )}
                 <button className="view-all-link" onClick={onViewAll}>
-                  <span>View All Blueprints ({destinations.length}+)</span>
+                  <span>View All Itineraries ({destinations.length}+)</span>
                   <ArrowRight size={15} />
                 </button>
               </div>
@@ -224,7 +226,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                 onClick={onViewAll}
                 className="btn-empty-secondary"
               >
-                Browse All 32 Blueprints
+                Browse All 32 Itineraries
               </button>
             </div>
           </div>
@@ -236,6 +238,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
               const isSaved = savedIds.includes(itinerary.id) || 
                               savedIds.includes(destSlug) || 
                               savedIds.some(sid => sid.toLowerCase() === itinerary.destination.toLowerCase());
+              const hasPurchased = isPurchased ? isPurchased(itinerary.id) : false;
 
               return (
                 <div 
@@ -243,7 +246,11 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                   className="pkg-card"
                 >
                   {/* Card Media Header */}
-                  <div className="pkg-card-media">
+                  <div 
+                    className="pkg-card-media cursor-pointer"
+                    onClick={() => onSelectItinerary(itinerary)}
+                    title="View itinerary overview"
+                  >
                     <img 
                       src={itinerary.coverImage} 
                       alt={itinerary.title} 
@@ -256,6 +263,13 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                       <span className="saved-corner-pill">
                         <Heart size={11} fill="#EF4444" stroke="#EF4444" />
                         <span>Saved</span>
+                      </span>
+                    )}
+
+                    {hasPurchased && (
+                      <span className="purchased-corner-pill" style={isSaved ? { left: '76px' } : undefined}>
+                        <CheckCircle2 size={11} className="text-emerald-500" />
+                        <span>Paid</span>
                       </span>
                     )}
 
@@ -332,28 +346,42 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                     {/* Card Footer: Price & Actions */}
                     <div className="pkg-card-footer">
                       <div className="pkg-price-col">
-                        <span className="pkg-price-sub">Verified Blueprint</span>
+                        <span className="pkg-price-sub">{hasPurchased ? 'Access Status' : 'Verified Itinerary'}</span>
                         <div className="pkg-price-main-row">
-                          <span className="pkg-price-amt">₹{itinerary.accessPrice || 99}</span>
-                          <span className="pkg-price-tag">Instant PDF</span>
+                          {hasPurchased ? (
+                            <span className="pkg-price-amt" style={{ color: '#059669', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                              <span>Paid & Unlocked</span>
+                            </span>
+                          ) : (
+                            <>
+                              <span className="pkg-price-amt">₹{itinerary.accessPrice || 99}</span>
+                              <span className="pkg-price-tag">Instant PDF</span>
+                            </>
+                          )}
                         </div>
                       </div>
 
                       <div className="pkg-actions-col">
-                        <button 
-                          className="btn-pkg-details"
-                          onClick={() => onSelectItinerary(itinerary)}
-                          title="View detailed daily blueprint and hotel recommendations"
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          className="btn-pkg-buy"
-                          onClick={() => onBuyItinerary(itinerary)}
-                          title="Instant buy for ₹99"
-                        >
-                          Buy ₹{itinerary.accessPrice || 99}
-                        </button>
+                        {hasPurchased ? (
+                          <button 
+                            className="btn-pkg-view"
+                            onClick={() => onSelectItinerary(itinerary)}
+                            title="View your unlocked itinerary & download PDF"
+                            style={{ width: '100%', justifyContent: 'center' }}
+                          >
+                            View Itinerary
+                          </button>
+                        ) : (
+                          <button 
+                            className="btn-pkg-buy"
+                            onClick={() => onBuyItinerary(itinerary)}
+                            title={`Instant buy for ₹${itinerary.accessPrice || 99}`}
+                            style={{ width: '100%', justifyContent: 'center' }}
+                          >
+                            Buy Now • ₹{itinerary.accessPrice || 99}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -401,7 +429,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                       durationLabel: primaryIt ? `${primaryIt.durationDays}D / ${primaryIt.durationNights}N` : `${masterDest.region || 'Curated'} Tour`,
                       accessPrice: masterDest.starting_price || masterDest.startingPrice || primaryIt?.accessPrice || 99,
                       itineraryCount: matchingItineraries.length || masterDest.itinerary_count || 1,
-                      tagline: masterDest.tagline || (matchingItineraries.length > 0 ? `${matchingItineraries.length} Verified Blueprints` : 'Handcrafted Holiday Packages'),
+                      tagline: masterDest.tagline || (matchingItineraries.length > 0 ? `${matchingItineraries.length} Verified Itineraries` : 'Handcrafted Holiday Packages'),
                       candidateIds
                     };
                   })
@@ -483,7 +511,7 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
                         </div>
 
                         <div className="card-action-cue">
-                          <span>Click to explore {dest.itineraryCount > 0 ? `${dest.itineraryCount} verified blueprints` : 'packages'} →</span>
+                          <span>Click to explore {dest.itineraryCount > 0 ? `${dest.itineraryCount} verified itineraries` : 'packages'} →</span>
                         </div>
                       </div>
                     </div>

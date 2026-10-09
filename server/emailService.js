@@ -65,7 +65,7 @@ export async function sendItineraryPdfEmail({
 
     const transporter = await getTransporter();
     const senderEmail = process.env.GMAIL_USER || 'itinerary-delivery@v3itinerary.com';
-    const cleanFilename = `${(destination || 'Travel').replace(/[^a-zA-Z0-9]/g, '_')}_Itinerary_Blueprint.pdf`;
+    const cleanFilename = `${(destination || 'Travel').replace(/[^a-zA-Z0-9]/g, '_')}_Itinerary_Plan.pdf`;
 
     // Email HTML template
     const htmlContent = `
@@ -93,13 +93,13 @@ export async function sendItineraryPdfEmail({
         <div class="email-container">
           <div class="header-bar">
             <h1 class="header-title">V3Itinerary.com</h1>
-            <p class="header-sub">Verified • Value • Variety — Certified Digital Travel Blueprint</p>
+            <p class="header-sub">Verified • Value • Variety — Certified Digital Travel Plan</p>
           </div>
 
           <div class="body-content">
             <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">Hello ${customerName},</h2>
             <p style="font-size: 14px; line-height: 1.6; color: #334155;">
-              Thank you for choosing <strong>V3Itinerary.com</strong>! Your digital travel blueprint for <strong>${destination}</strong> is attached to this email as an offline PDF.
+              Thank you for choosing <strong>V3Itinerary.com</strong>! Your digital travel itinerary for <strong>${destination}</strong> is attached to this email as an offline PDF.
             </p>
 
             <div class="order-callout">
@@ -154,8 +154,8 @@ export async function sendItineraryPdfEmail({
     const mailOptions = {
       from: `"V3Itinerary Support" <${senderEmail}>`,
       to: toEmail,
-      subject: `✈️ Your Travel Blueprint: ${destination} (${orderId})`,
-      text: `Hello ${customerName},\n\nThank you for purchasing the ${destination} Itinerary Blueprint from V3Itinerary.com! Your order ${orderId} has been confirmed. Please find your complete itinerary PDF attached.\n\nSupport: support@v3itinerary.com`,
+      subject: `✈️ Your Travel Itinerary: ${destination} (${orderId})`,
+      text: `Hello ${customerName},\n\nThank you for choosing the ${destination} Itinerary from V3Itinerary.com! Your order ${orderId} has been confirmed. Please find your complete itinerary PDF attached.\n\nSupport: support@v3itinerary.com`,
       html: htmlContent,
       attachments: pdfBase64 ? [
         {

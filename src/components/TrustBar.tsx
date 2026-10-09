@@ -62,7 +62,7 @@ export const TrustBar: React.FC = () => {
         <div className="pricing-guardrail-banner">
           <Info size={18} className="guardrail-icon" />
           <p className="guardrail-text">
-            <strong>Non-Deceptive Pricing Guarantee:</strong> ₹99 is the nominal fee to access the complete digital travel blueprint and verified agent contact. Actual on-ground tour packages and travel bookings are customized separately.
+            <strong>Clear Pricing:</strong> ₹99 is the fee to unlock the complete travel itinerary and direct verified agent contact. On-ground hotel and tour bookings are arranged separately with the agent.
           </p>
         </div>
       </div>

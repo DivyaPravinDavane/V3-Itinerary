@@ -19,7 +19,7 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
   currentPdfName = '',
   currentPdfSize = 0,
   onPdfChange,
-  label = 'Official Itinerary Blueprint PDF',
+  label = 'Official Itinerary PDF',
   helperText = 'Upload your complete tour itinerary PDF directly from your computer. Travelers will view and download this exact PDF!'
 }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -147,8 +147,8 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
             </div>
             <div className="pdf-file-details">
               <div className="flex items-center gap-2 flex-wrap">
-                <h5 className="pdf-file-name" title={currentPdfName || 'Itinerary_Blueprint.pdf'}>
-                  {currentPdfName || 'Itinerary_Blueprint.pdf'}
+                <h5 className="pdf-file-name" title={currentPdfName || 'Itinerary_Plan.pdf'}>
+                  {currentPdfName || 'Itinerary_Plan.pdf'}
                 </h5>
                 <span className="pdf-size-pill">
                   {formatFileSize(currentPdfSize) || 'Ready'}
@@ -219,7 +219,7 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
                 Click to Upload Itinerary PDF from Computer
               </div>
               <p className="text-xs text-slate-500 mt-1 max-w-md">
-                Select your official itinerary blueprint (.pdf) from your PC or drag and drop it here.
+                Select your official itinerary PDF (.pdf) from your PC or drag and drop it here.
               </p>
               <div className="pdf-dropzone-pills mt-3 flex items-center justify-center gap-2 flex-wrap">
                 <span className="drop-pill">📄 PDF Document</span>
@@ -242,7 +242,7 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
               <div className="flex items-center gap-2.5">
                 <FileText size={18} className="text-red-400" />
                 <span className="font-bold text-sm truncate max-w-sm">
-                  {currentPdfName || 'Itinerary_Blueprint.pdf'}
+                  {currentPdfName || 'Itinerary_Plan.pdf'}
                 </span>
                 <span className="text-xs text-slate-400 font-mono">
                   ({formatFileSize(currentPdfSize) || 'PDF Document'})

@@ -506,6 +506,18 @@ export function App() {
   };
 
   const handleStartCheckout = (itinerary: Itinerary) => {
+    // If it's already paid, do NOT add or open Razorpay!
+    if (isPurchased(itinerary.id)) {
+      showToast('✓ This itinerary is already unlocked and paid!');
+      setSelectedItinerary(itinerary);
+      return;
+    }
+    // If free (₹0 price), unlock directly without Razorpay!
+    if ((itinerary.accessPrice ?? 99) === 0) {
+      showToast('🎉 Free Itinerary Unlocked!');
+      setSelectedItinerary(itinerary);
+      return;
+    }
     // Close detail modal and open full Razorpay checkout gateway cleanly
     setSelectedItinerary(null);
     setGatewayItinerary(itinerary);
@@ -619,7 +631,26 @@ export function App() {
   };
 
   const isPurchased = (itineraryId: string) => {
-    return user.purchasedOrders.some(order => order.itineraryId === itineraryId);
+    if (!itineraryId) return false;
+    const target = allItineraries.find(it => it.id === itineraryId);
+    return user.purchasedOrders.some(order => {
+      if (order.itineraryId === itineraryId) return true;
+      if (target && order.itineraryTitle && target.title) {
+        if (order.itineraryTitle.trim().toLowerCase() === target.title.trim().toLowerCase()) return true;
+      }
+      return false;
+    });
+  };
+
+  const getOrderForItinerary = (itineraryId: string) => {
+    const target = allItineraries.find(it => it.id === itineraryId);
+    return user.purchasedOrders.find(order => {
+      if (order.itineraryId === itineraryId) return true;
+      if (target && order.itineraryTitle && target.title) {
+        return order.itineraryTitle.trim().toLowerCase() === target.title.trim().toLowerCase();
+      }
+      return false;
+    }) || null;
   };
 
   const handleOpenAuth = (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => {
@@ -702,7 +733,11 @@ export function App() {
             setSelectedItinerary(itinerary);
           }}
           onPayToView={(itinerary) => {
-            handleStartCheckout(itinerary);
+            if (isPurchased(itinerary.id)) {
+              setSelectedItinerary(itinerary);
+            } else {
+              handleStartCheckout(itinerary);
+            }
           }}
           onToggleSave={handleToggleSave}
           onSelectDestination={(newDest) => {
@@ -736,6 +771,8 @@ export function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigatePage={handleNavigatePage}
+            onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
+            isAgent={user.role === 'agent'}
           />
         </>
       ) : currentPage === 'agent-studio' ? (
@@ -760,6 +797,8 @@ export function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigatePage={handleNavigatePage}
+            onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
+            isAgent={user.role === 'agent'}
           />
         </>
       ) : (
@@ -777,6 +816,7 @@ export function App() {
               destinations={filteredDestinations}
               destinationsMaster={destinationsMaster}
               savedIds={user.savedItineraryIds}
+              isPurchased={isPurchased}
               searchFilter={searchFilter}
               isViewingAll={isViewingAll}
               onClearSearch={handleClearSearch}
@@ -815,6 +855,8 @@ export function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigatePage={handleNavigatePage}
+            onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
+            isAgent={user.role === 'agent'}
           />
         </>
       )}
@@ -833,8 +875,8 @@ export function App() {
             )
           )}
           onToggleSave={handleToggleSave}
-          isPurchased={isPurchased(selectedItinerary.id) || user.role === 'agent'}
-          order={user.purchasedOrders.find(o => o.itineraryId === selectedItinerary.id)}
+          isPurchased={isPurchased(selectedItinerary.id)}
+          order={getOrderForItinerary(selectedItinerary.id)}
           customerName={user.fullName}
           customerEmail={user.email}
           onOpenOrderSuccess={() => {}}

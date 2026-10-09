@@ -54,8 +54,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   }, [allItineraries]);
 
   const [notification, setNotification] = useState<string | null>(null);
-  const [showAddBlueprintModal, setShowAddBlueprintModal] = useState(false);
-  const [newBlueprint, setNewBlueprint] = useState({
+  const [showAddItineraryModal, setShowAddItineraryModal] = useState(false);
+  const [newItinerary, setNewItinerary] = useState({
     title: '',
     destination: '',
     country: '',
@@ -422,7 +422,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
                   <button 
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all"
-                    onClick={() => setShowAddBlueprintModal(true)}
+                    onClick={() => setShowAddItineraryModal(true)}
                   >
                     <span>+ Add Itinerary</span>
                   </button>
@@ -693,14 +693,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               </div>
             </div>
           )}
-        {/* Add Blueprint Modal */}
-        {showAddBlueprintModal && (
+        {/* Add Itinerary Modal */}
+        {showAddItineraryModal && (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
               <div className="flex justify-between items-center border-b pb-3">
                 <h3 className="text-lg font-bold text-slate-800">Add New Itinerary</h3>
                 <button 
-                  onClick={() => setShowAddBlueprintModal(false)}
+                  onClick={() => setShowAddItineraryModal(false)}
                   className="text-slate-400 hover:text-slate-700 p-1"
                 >
                   <X size={18} />
@@ -713,8 +713,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     type="text" 
                     placeholder="e.g. 5-Day Heritage Rajasthan Odyssey" 
                     className="w-full px-3 py-2 border rounded-lg text-sm"
-                    value={newBlueprint.title}
-                    onChange={(e) => setNewBlueprint({ ...newBlueprint, title: e.target.value })}
+                    value={newItinerary.title}
+                    onChange={(e) => setNewItinerary({ ...newItinerary, title: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -724,8 +724,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       type="text" 
                       placeholder="e.g. Jaipur" 
                       className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={newBlueprint.destination}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, destination: e.target.value })}
+                      value={newItinerary.destination}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, destination: e.target.value })}
                     />
                   </div>
                   <div>
@@ -734,8 +734,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       type="text" 
                       placeholder="e.g. India" 
                       className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={newBlueprint.country}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, country: e.target.value })}
+                      value={newItinerary.country}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, country: e.target.value })}
                     />
                   </div>
                 </div>
@@ -745,8 +745,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <input 
                       type="number" 
                       className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={newBlueprint.durationDays}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, durationDays: parseInt(e.target.value) || 1 })}
+                      value={newItinerary.durationDays}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, durationDays: parseInt(e.target.value) || 1 })}
                     />
                   </div>
                   <div>
@@ -754,8 +754,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <input 
                       type="number" 
                       className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={newBlueprint.durationNights}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, durationNights: parseInt(e.target.value) || 1 })}
+                      value={newItinerary.durationNights}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, durationNights: parseInt(e.target.value) || 1 })}
                     />
                   </div>
                 </div>
@@ -765,8 +765,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <input 
                       type="number" 
                       className="w-full px-3 py-2 border rounded-lg text-sm font-semibold text-blue-600"
-                      value={newBlueprint.totalAccessPrice}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, totalAccessPrice: parseFloat(e.target.value) || 99 })}
+                      value={newItinerary.totalAccessPrice}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, totalAccessPrice: parseFloat(e.target.value) || 99 })}
                     />
                   </div>
                   <div>
@@ -774,8 +774,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <input 
                       type="number" 
                       className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={newBlueprint.estimatedTripCost}
-                      onChange={(e) => setNewBlueprint({ ...newBlueprint, estimatedTripCost: parseFloat(e.target.value) || 50000 })}
+                      value={newItinerary.estimatedTripCost}
+                      onChange={(e) => setNewItinerary({ ...newItinerary, estimatedTripCost: parseFloat(e.target.value) || 50000 })}
                     />
                   </div>
                 </div>
@@ -783,25 +783,25 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button 
                   className="px-4 py-2 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50"
-                  onClick={() => setShowAddBlueprintModal(false)}
+                  onClick={() => setShowAddItineraryModal(false)}
                 >
                   Cancel
                 </button>
                 <button 
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm"
                   onClick={async () => {
-                    if (!newBlueprint.title || !newBlueprint.destination) {
+                    if (!newItinerary.title || !newItinerary.destination) {
                       alert('Please provide a title and destination.');
                       return;
                     }
                     const res = await createItineraryInBackend({
-                      ...newBlueprint,
+                      ...newItinerary,
                       id: `itin_${Date.now()}`
                     });
                     if (res && res.success) {
-                      showNotice(`✅ Itinerary "${newBlueprint.title}" created & synced!`);
-                      setShowAddBlueprintModal(false);
-                      setNewBlueprint({
+                      showNotice(`✅ Itinerary "${newItinerary.title}" created & synced!`);
+                      setShowAddItineraryModal(false);
+                      setNewItinerary({
                         title: '',
                         destination: '',
                         country: '',

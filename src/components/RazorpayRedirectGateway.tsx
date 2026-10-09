@@ -60,7 +60,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
       return;
     }
     if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('Please enter a valid Gmail / Email address to deliver your blueprint.');
+      setErrorMessage('Please enter a valid Gmail / Email address to deliver your itinerary.');
       return;
     }
     if (!address.trim()) {
@@ -99,7 +99,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         amount: 9900, // ₹99.00 in paise
         currency: 'INR',
         name: 'V3Itinerary',
-        description: `${itinerary.destination} Travel Blueprint`,
+        description: `${itinerary.destination} Travel Itinerary`,
         image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
         handler: async function (response: any) {
           setIsProcessing(false);
@@ -218,7 +218,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
               <span className="rzp-sidebar-sublabel">Selected Itinerary Package</span>
               <h3 className="rzp-order-title">{itinerary.title}</h3>
               <p className="rzp-order-details">
-                {itinerary.destination} • {itinerary.durationDays} Days / {itinerary.durationNights} Nights • Complete Travel Blueprint
+                {itinerary.destination} • {itinerary.durationDays} Days / {itinerary.durationNights} Nights • Complete Travel Plan
               </p>
 
               <div className="rzp-amount-highlight">
@@ -377,7 +377,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
                 </div>
                 <div className="rzp-trust-bullet">
                   <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-                  <span>Instant PDF Blueprint Dispatch</span>
+                  <span>Instant PDF Itinerary Dispatch</span>
                 </div>
                 <div className="rzp-trust-bullet">
                   <FileText size={14} className="text-emerald-600 shrink-0" />

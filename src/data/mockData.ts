@@ -24,7 +24,7 @@ export const POPULAR_DESTINATIONS: Itinerary[] = [
       'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
     ],
-    overview: 'The definitive blueprint for an unforgettable Dubai holiday. From standing at the pinnacle of Burj Khalifa to dune bashing through red desert sands and sailing the Dubai Marina at sunset.',
+    overview: 'The complete travel plan for an unforgettable Dubai holiday. From standing atop Burj Khalifa to dune bashing through red desert sands and sailing the Dubai Marina at sunset.',
     bestTimeToVisit: 'November to March (Pleasant 24°C - 28°C)',
     isPopular: true,
     agent: {
@@ -132,7 +132,7 @@ export const POPULAR_DESTINATIONS: Itinerary[] = [
       'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
     ],
-    overview: 'A dream romantic gateway blueprint designed for honeymooners and beach lovers. Includes seaplane/speedboat logistics, house reef snorkeling spots, private candlelit beach dinner, and overwater bungalow selection guide.',
+    overview: 'A dream romantic holiday plan designed for honeymooners and beach lovers. Includes speedboat transfers, house reef snorkeling spots, private candlelit beach dinner, and overwater bungalow guide.',
     bestTimeToVisit: 'December to April (Dry Season, crystal turquoise water)',
     isPopular: true,
     agent: {
@@ -1153,7 +1153,7 @@ export const POPULAR_DESTINATIONS: Itinerary[] = [
       localTransport: 3000
     },
     inclusions: [
-      'Inner Line Permit (ILP) & Protected Area Permit (PAP) online submission blueprint',
+      'Inner Line Permit (ILP) & Protected Area Permit (PAP) online submission guide',
       'Acute Mountain Sickness (AMS) prevention and Diamox dosage protocol',
       'Ladakh Taxi Union approved fixed rate driver contacts'
     ],
@@ -1491,7 +1491,7 @@ export const POPULAR_DESTINATIONS: Itinerary[] = [
       localTransport: 8000
     },
     inclusions: [
-      'Japan Rail (JR) Pass vs Regional IC Card (Suica/Pasmo) optimization blueprint',
+      'Japan Rail (JR) Pass vs Regional IC Card (Suica/Pasmo) comparison guide',
       'Japan Tourist eVisa application checklist & financial documentation templates',
       'Pocket Wi-Fi airport pickup instructions'
     ],
@@ -2234,7 +2234,7 @@ export const ADDITIONAL_ITINERARIES: Itinerary[] = [
     galleryImages: [
       'https://images.unsplash.com/photo-1513415564515-763d91423bdd?auto=format&fit=crop&w=800&q=80'
     ],
-    overview: 'The smartest 3-in-1 combo pass blueprint: Mount Faber Cable Car sky pass, Sentosa SkyHelix panoramic ride, and Madame Tussauds 4D Marvel experience with free cancellation guidance.',
+    overview: 'The smartest 3-in-1 combo pass plan: Mount Faber Cable Car sky pass, Sentosa SkyHelix panoramic ride, and Madame Tussauds 4D Marvel experience with free cancellation guidance.',
     bestTimeToVisit: 'Year-round',
     agent: {
       id: 'ag-103',
@@ -2884,8 +2884,8 @@ export const ADDITIONAL_ITINERARIES: Itinerary[] = [
       localTransport: 6000
     },
     inclusions: [
-      'Dual-nation TGV Lyria and Swiss Travel Pass coordination matrix',
-      'Schengen France + Switzerland dual entry visa blueprint',
+      'Dual-nation TGV Lyria and Swiss Travel Pass transfer guide',
+      'Schengen France + Switzerland dual entry visa guide',
       'Skip-the-line Eiffel Tower and Louvre reserved slot booking secrets'
     ],
     exclusions: ['Schengen Visa biometric fee', 'Swiss Pass mountain excursion add-ons']

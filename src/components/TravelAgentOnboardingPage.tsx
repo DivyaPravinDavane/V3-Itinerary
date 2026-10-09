@@ -325,7 +325,7 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
                   <span className="success-val">{city}, {state}</span>
                 </div>
                 <div className="success-row">
-                  <span className="success-lbl">Planned Blueprints:</span>
+                  <span className="success-lbl">Planned Itineraries:</span>
                   <span className="success-val">{plannedUploads} Itineraries</span>
                 </div>
                 {businessProofFile && (

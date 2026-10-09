@@ -516,7 +516,7 @@ export async function insertItinerary(it) {
           country: it.country || 'India',
           region: it.region || 'Domestic',
           cover_image: it.coverImage || 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&auto=format&fit=crop&q=80',
-          tagline: `Curated verified blueprints for ${destName}`,
+          tagline: `Curated verified itineraries for ${destName}`,
           description: it.overview || `Explore hand-crafted itineraries for ${destName}.`,
           itinerary_count: 1,
           starting_price: it.totalAccessPrice || 99

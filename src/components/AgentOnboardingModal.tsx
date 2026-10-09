@@ -72,7 +72,7 @@ export const AgentOnboardingModal: React.FC<AgentOnboardingModalProps> = ({ isOp
           </div>
           <h2 className="agent-modal-title">Verified Travel Agent Onboarding</h2>
           <p className="agent-modal-subtitle">
-            Monetize your crafted itineraries across India. V3Itinerary requires mandatory 15-digit GSTIN compliance to eliminate scams and protect travelers.
+            Publish your travel itineraries and reach travelers across India. V3Itinerary requires verified GSTIN to maintain trust and quality.
           </p>
         </div>
 
@@ -81,9 +81,9 @@ export const AgentOnboardingModal: React.FC<AgentOnboardingModalProps> = ({ isOp
             <div className="gst-check-icon">
               <CheckCircle2 size={48} className="text-emerald-500" />
             </div>
-            <h3 className="gst-success-title">GSTIN Verified & Account Provisioned!</h3>
+            <h3 className="gst-success-title">GSTIN Verified & Account Ready!</h3>
             <p className="gst-success-body">
-              Entity <strong>{agencyName}</strong> (GSTIN: <span className="font-mono text-emerald-700">{gstin.toUpperCase()}</span>) has passed automated GSTN portal verification.
+              Entity <strong>{agencyName}</strong> (GSTIN: <span className="font-mono text-emerald-700">{gstin.toUpperCase()}</span>) has been verified successfully.
             </p>
             <div className="gst-badge-preview">
               <span className="agent-verified-stamp">
@@ -94,7 +94,7 @@ export const AgentOnboardingModal: React.FC<AgentOnboardingModalProps> = ({ isOp
               Your Agent Portal login link and dashboard access credentials have been dispatched to <strong>{email}</strong>.
             </p>
             <button className="btn-primary-gradient full-w mt-4" onClick={onClose}>
-              Return to Marketplace
+              Return to Home
             </button>
           </div>
         ) : (
