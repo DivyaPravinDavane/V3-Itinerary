@@ -740,24 +740,34 @@ export async function fetchItineraries(): Promise<Itinerary[]> {
     console.warn('Backend unavailable, using persistent local store & cache:', err);
   }
 
-  // Combine backend itineraries (or fallback data) with our local custom itineraries
-  const baseList: Itinerary[] = backendItineraries.length > 0 
-    ? backendItineraries 
-    : (FALLBACK_ALL_ITINERARIES as Itinerary[]);
-
   const map = new Map<string, Itinerary>();
 
-  // 1. Add base/remote itineraries that have not been deleted
-  for (const it of baseList) {
-    if (it && it.id && !deletedIds.has(it.id)) {
-      map.set(String(it.id), it);
+  if (backendItineraries.length > 0) {
+    // 1. MySQL database is the authoritative source of truth: load all remote rows directly
+    for (const it of backendItineraries) {
+      if (it && it.id) {
+        map.set(String(it.id), it);
+      }
     }
-  }
 
-  // 2. Prepend/overlay custom local itineraries (so newly published agent itineraries are prioritized)
-  for (const it of localCustom) {
-    if (it && it.id && !deletedIds.has(it.id)) {
-      map.set(String(it.id), it);
+    // 2. Only include offline local drafts that do not yet exist in MySQL
+    for (const it of localCustom) {
+      if (it && it.id && !map.has(String(it.id)) && !deletedIds.has(it.id)) {
+        map.set(String(it.id), it);
+      }
+    }
+  } else {
+    // Backend offline: use fallback mock data + local storage items
+    const baseList: Itinerary[] = (FALLBACK_ALL_ITINERARIES as Itinerary[]);
+    for (const it of baseList) {
+      if (it && it.id && !deletedIds.has(it.id)) {
+        map.set(String(it.id), it);
+      }
+    }
+    for (const it of localCustom) {
+      if (it && it.id && !deletedIds.has(it.id)) {
+        map.set(String(it.id), it);
+      }
     }
   }
 

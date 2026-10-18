@@ -1,11 +1,15 @@
 import React from 'react';
-import { Search, FileText, Download, UserCheck, ArrowRight, Users, Globe, Smile, MapPin } from 'lucide-react';
+import { Search, FileText, Download, UserCheck, ArrowRight, Users, Globe, Smile, MapPin, LogIn } from 'lucide-react';
 
 interface MiddleSectionProps {
   onOpenAgentModal: () => void;
+  onOpenAgentLogin?: () => void;
 }
 
-export const MiddleSection: React.FC<MiddleSectionProps> = ({ onOpenAgentModal }) => {
+export const MiddleSection: React.FC<MiddleSectionProps> = ({ 
+  onOpenAgentModal, 
+  onOpenAgentLogin 
+}) => {
   return (
     <section className="middle-section" id="how-it-works">
       <div className="section-container">
@@ -76,9 +80,20 @@ export const MiddleSection: React.FC<MiddleSectionProps> = ({ onOpenAgentModal }
                 Upload Unlimited Itineraries<br />
                 Get Genuine Leads Across India
               </h3>
-              <button className="btn-join-now" onClick={onOpenAgentModal}>
-                Join Now
-              </button>
+              <div className="agent-promo-btn-group">
+                <button className="btn-join-now" onClick={onOpenAgentModal}>
+                  Join Now
+                </button>
+                <button 
+                  type="button"
+                  className="btn-agent-login-promo" 
+                  onClick={onOpenAgentLogin}
+                  title="Sign In to Travel Agent Studio"
+                >
+                  <LogIn size={15} />
+                  <span>Travel Agent Login</span>
+                </button>
+              </div>
             </div>
 
             <div className="agent-promo-image-box">

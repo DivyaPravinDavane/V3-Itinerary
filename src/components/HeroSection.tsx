@@ -117,8 +117,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onSearch, activeFilter
       <div className="hero-container">
         <div className="hero-content-left">
           <h1 className="hero-title">
-            India's Trusted Platform for<br />
-            <span className="hero-title-accent">Travel Itineraries</span>
+            Plan Smarter, Travel Better with<br />
+            <span className="hero-title-accent">Handcrafted Itineraries</span>
           </h1>
 
           <h2 className="hero-subtitle">Discover. Buy. Travel Better.</h2>

@@ -72,6 +72,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   } | null>(null);
   const [isPublishedTick, setIsPublishedTick] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Agency info resolution
   const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'My Agency';
@@ -318,6 +319,13 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
       if (errEl) errEl.scrollIntoView({ behavior: 'smooth' });
       return;
     }
+
+    if (!formData.pdfUrl || !formData.pdfUrl.trim()) {
+      setFormError('⚠️ PDF Upload is Compulsory: Please upload the official Tour Itinerary PDF document before publishing.');
+      const pdfEl = document.getElementById('pdf-upload-section');
+      if (pdfEl) pdfEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     setFormError(null);
 
     setIsSubmitting(true);
@@ -445,6 +453,15 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   const handleUpdateBlueprint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItinerary) return;
+
+    if (!editingItinerary.pdfUrl || !editingItinerary.pdfUrl.trim()) {
+      setEditError('⚠️ PDF Upload is Compulsory: An official Itinerary PDF document (.pdf) must be uploaded before saving changes.');
+      showNotice('⚠️ PDF Upload is Compulsory: Please attach an official Itinerary PDF document before saving.');
+      const pdfEl = document.getElementById('edit-pdf-upload-section');
+      if (pdfEl) pdfEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setEditError(null);
 
     setIsSubmitting(true);
     try {
@@ -687,9 +704,13 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                       <span className="it-card-region-badge">
                         {it.region || 'Domestic'}
                       </span>
-                      {it.pdfUrl && (
+                      {it.pdfUrl ? (
                         <span className="it-card-pdf-badge" title="Official Agent PDF Document Attached">
                           <FileText size={10} /> PDF
+                        </span>
+                      ) : (
+                        <span className="it-card-pdf-missing-badge" title="PDF Document Compulsory - Click Edit to upload PDF">
+                          <AlertCircle size={10} /> PDF Required
                         </span>
                       )}
                     </div>
@@ -743,7 +764,10 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
 
                         <button 
                           className="btn-it-action edit"
-                          onClick={() => setEditingItinerary({ ...it })}
+                          onClick={() => {
+                            setEditError(null);
+                            setEditingItinerary({ ...it });
+                          }}
                           title="Edit Itinerary (Update)"
                         >
                           <Edit3 size={14} />
@@ -771,7 +795,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
         {activeTab === 'create' && (
           <div className="agent-content-pane animate-fade-in">
             <form onSubmit={handleCreateBlueprint} className="agent-form-container">
-              <div className="form-section-head">
+              <div id="create-itinerary-header" className="form-section-head">
                 <Sparkles size={18} className="text-emerald-600" />
                 <div>
                   <h3 className="font-bold text-slate-800 text-base">Create Itinerary</h3>
@@ -779,6 +803,14 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                     Publish an itinerary. It will immediately reflect on the customer portal for travelers to explore and purchase.
                   </p>
                 </div>
+              </div>
+
+              {/* Compulsory PDF notice */}
+              <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900 mb-2">
+                <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                <span>
+                  <strong>Compulsory Rule for Travel Agents:</strong> Uploading your official tour itinerary PDF document (.pdf) is <strong>strictly mandatory</strong>. Every itinerary published on V3 Itinerary requires an attached PDF document so travelers can preview and download the verified plan.
+                </span>
               </div>
 
               {/* 1. Basic Details */}
@@ -914,9 +946,10 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 />
               </div>
 
-              {/* 4. Primary: Upload Itinerary PDF from Computer */}
-              <div className="mt-5 p-5 rounded-xl bg-gradient-to-br from-red-50/60 via-slate-50 to-orange-50/40 border-2 border-dashed border-red-200 shadow-sm">
+              {/* 4. Primary: Upload Itinerary PDF from Computer (Compulsory) */}
+              <div id="pdf-upload-section" className="mt-5 p-5 rounded-xl bg-gradient-to-br from-red-50/60 via-slate-50 to-orange-50/40 border-2 border-dashed border-red-300 shadow-sm transition-all">
                 <ItineraryPdfUploader 
+                  required={true}
                   currentPdfUrl={formData.pdfUrl}
                   currentPdfName={formData.pdfName}
                   currentPdfSize={formData.pdfSize}
@@ -928,6 +961,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                         pdfName: pdf.name,
                         pdfSize: pdf.size
                       }));
+                      setFormError(null);
                     } else {
                       setFormData(prev => ({
                         ...prev,
@@ -937,8 +971,8 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                       }));
                     }
                   }}
-                  label="Upload Itinerary PDF from PC / Computer"
-                  helperText="Upload your official comprehensive itinerary PDF (day-by-day plan, pricing, hotels, vouchers, & inclusions). Customers and travellers will be able to view, preview, and download this exact PDF directly!"
+                  label="Upload Tour Itinerary PDF from PC / Computer"
+                  helperText="Upload your official comprehensive itinerary PDF (day-by-day plan, pricing, hotels, vouchers, & inclusions). Compulsory for all published itineraries."
                 />
               </div>
 
@@ -1490,8 +1524,9 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                   helperText="Upload a fresh photo directly from your PC/computer or pick a preset."
                 />
 
-                <div className="mt-4 p-4 rounded-xl bg-red-50/50 border border-red-200">
+                <div id="edit-pdf-upload-section" className="mt-4 p-4 rounded-xl bg-red-50/50 border border-red-300">
                   <ItineraryPdfUploader 
+                    required={true}
                     currentPdfUrl={editingItinerary.pdfUrl}
                     currentPdfName={editingItinerary.pdfName}
                     currentPdfSize={editingItinerary.pdfSize}
@@ -1503,6 +1538,7 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                           pdfName: pdf.name,
                           pdfSize: pdf.size
                         });
+                        setEditError(null);
                       } else {
                         setEditingItinerary({
                           ...editingItinerary,
@@ -1513,9 +1549,16 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                       }
                     }}
                     label="Official Itinerary Document (PDF)"
-                    helperText="Upload or update the official itinerary PDF for travelers to view and download directly."
+                    helperText="Upload or update the official itinerary PDF for travelers to view and download directly (Compulsory)."
                   />
                 </div>
+
+                {editError && (
+                  <div className="create-form-error-banner animate-shake my-1">
+                    <AlertCircle size={16} className="shrink-0 text-red-600" />
+                    <span>{editError}</span>
+                  </div>
+                )}
 
                 <div>
                   <label className="agent-lbl">Overview Summary</label>

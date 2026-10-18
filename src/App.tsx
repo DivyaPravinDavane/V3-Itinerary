@@ -15,6 +15,8 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { AgentDashboardModal } from './components/AgentDashboardModal';
 import { DestinationPackagesModal } from './components/DestinationPackagesModal';
 import { DestinationsPage } from './components/DestinationsPage';
+import { LegalPoliciesPage } from './components/LegalPoliciesPage';
+import { type PolicyTabKey } from './data/legalPoliciesData';
 import { ItineraryDetailModal } from './components/ItineraryDetailModal';
 import { RazorpayRedirectGateway } from './components/RazorpayRedirectGateway';
 import { POPULAR_DESTINATIONS as FALLBACK_POPULAR_DESTINATIONS, ALL_ITINERARIES as FALLBACK_ALL_ITINERARIES } from './data/mockData';
@@ -284,13 +286,25 @@ export function App() {
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio')
-  const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio'>(() => {
+  // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio' | 'policies')
+  const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio' | 'policies'>(() => {
     if (typeof window !== 'undefined') {
-      if (window.location.hash === '#destinations') return 'destinations';
-      if (window.location.hash === '#agent-studio') return 'agent-studio';
+      const hash = window.location.hash;
+      if (hash === '#destinations') return 'destinations';
+      if (hash === '#agent-studio') return 'agent-studio';
+      if (['#policies', '#privacy', '#terms', '#refund', '#gst'].includes(hash)) return 'policies';
     }
     return 'home';
+  });
+
+  const [activePolicyTab, setActivePolicyTab] = useState<PolicyTabKey>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'privacy' || hash === 'terms' || hash === 'refund' || hash === 'gst') {
+        return hash as PolicyTabKey;
+      }
+    }
+    return 'privacy';
   });
 
   // Synchronize browser history / URL hash navigation
@@ -303,6 +317,13 @@ export function App() {
       } else if (hash === '#agent-studio') {
         setCurrentPage('agent-studio');
         setSelectedDestinationName(null);
+      } else if (['#privacy', '#terms', '#refund', '#gst'].includes(hash)) {
+        setCurrentPage('policies');
+        setActivePolicyTab(hash.replace('#', '') as PolicyTabKey);
+        setSelectedDestinationName(null);
+      } else if (hash === '#policies') {
+        setCurrentPage('policies');
+        setSelectedDestinationName(null);
       } else if (hash === '#home' || hash === '') {
         setCurrentPage('home');
       }
@@ -311,10 +332,19 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const handleNavigatePage = (page: 'home' | 'destinations' | 'agent-studio') => {
+  const handleNavigatePage = (
+    page: 'home' | 'destinations' | 'agent-studio' | 'policies',
+    policyTab?: PolicyTabKey
+  ) => {
     setCurrentPage(page);
     setSelectedDestinationName(null);
-    window.location.hash = `#${page}`;
+    if (page === 'policies') {
+      const tab = policyTab || 'privacy';
+      setActivePolicyTab(tab);
+      window.location.hash = `#${tab}`;
+    } else {
+      window.location.hash = `#${page}`;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -654,8 +684,8 @@ export function App() {
   };
 
   const handleOpenAuth = (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => {
-    if (mode) setAuthMode(mode);
-    if (role) setAuthRole(role);
+    setAuthMode(mode || 'login');
+    setAuthRole(role || 'customer');
     setAuthModalOpen(true);
   };
 
@@ -765,6 +795,7 @@ export function App() {
           {/* Footer */}
           <Footer 
             onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
               setSelectedDestinationName(name);
@@ -791,6 +822,29 @@ export function App() {
           {/* Footer */}
           <Footer 
             onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
+            onScrollToSection={scrollToSection}
+            onSelectDestination={(name) => {
+              setSelectedDestinationName(name);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigatePage={handleNavigatePage}
+            onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
+            isAgent={user.role === 'agent'}
+          />
+        </>
+      ) : currentPage === 'policies' ? (
+        <>
+          <LegalPoliciesPage 
+            initialTab={activePolicyTab}
+            onBackToHome={() => handleNavigatePage('home')}
+            onTabChange={(tab) => setActivePolicyTab(tab)}
+          />
+
+          {/* Footer */}
+          <Footer 
+            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
               setSelectedDestinationName(name);
@@ -840,6 +894,7 @@ export function App() {
             {/* 3. Middle Section: How It Works + Agent Promo + Stats */}
             <MiddleSection 
               onOpenAgentModal={() => setAgentModalOpen(true)}
+              onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             />
 
             {/* 4. Trust Pillars & Pricing Guardrail Strip */}
@@ -849,6 +904,7 @@ export function App() {
           {/* Footer */}
           <Footer 
             onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
               setSelectedDestinationName(name);
@@ -938,6 +994,7 @@ export function App() {
       <TravelAgentOnboardingPage 
         isOpen={agentModalOpen}
         onClose={() => setAgentModalOpen(false)}
+        onOpenLogin={() => handleOpenAuth('login', 'agent')}
       />
 
       {/* MODAL 6: Customer, Travel Agent & Admin Auth Modal */}

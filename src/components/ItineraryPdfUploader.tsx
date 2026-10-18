@@ -12,6 +12,7 @@ interface ItineraryPdfUploaderProps {
   onPdfChange: (pdfData: { url: string; name: string; size: number } | null) => void;
   label?: string;
   helperText?: string;
+  required?: boolean;
 }
 
 export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
@@ -20,7 +21,8 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
   currentPdfSize = 0,
   onPdfChange,
   label = 'Official Itinerary PDF',
-  helperText = 'Upload your complete tour itinerary PDF directly from your computer. Travelers will view and download this exact PDF!'
+  helperText = 'Upload your complete tour itinerary PDF directly from your computer. Travelers will view and download this exact PDF!',
+  required = true
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -102,17 +104,23 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
       <div className="pdf-uploader-head flex items-center justify-between gap-2 mb-2">
         <div>
           <label className="agent-lbl font-bold flex items-center gap-1.5 text-slate-800 text-sm">
-            <FileText size={17} className="text-red-500" />
-            <span>{label} *</span>
+            <FileText size={17} className={hasPdf ? "text-emerald-600" : "text-red-500"} />
+            <span>{label}</span>
+            {required && <span className="text-red-600 font-extrabold">*</span>}
           </label>
           <p className="text-xs text-slate-500 mt-0.5">{helperText}</p>
         </div>
-        {hasPdf && (
+        {hasPdf ? (
           <span className="badge-pdf-attached-top">
             <CheckCircle2 size={13} className="text-emerald-600" />
-            <span>PDF ATTACHED</span>
+            <span>PDF ATTACHED & READY</span>
           </span>
-        )}
+        ) : required ? (
+          <span className="badge-pdf-compulsory-top">
+            <AlertCircle size={13} className="text-red-600" />
+            <span>COMPULSORY *</span>
+          </span>
+        ) : null}
       </div>
 
       {/* Hidden Native File Input */}
@@ -196,7 +204,7 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
       ) : (
         /* CASE 2: NO PDF - DRAG & DROP ZONE */
         <div 
-          className={`pdf-dropzone ${isDragOver ? 'drag-active' : ''} ${isUploading ? 'uploading' : ''}`}
+          className={`pdf-dropzone ${required ? 'pdf-dropzone-compulsory' : ''} ${isDragOver ? 'drag-active' : ''} ${isUploading ? 'uploading' : ''}`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -212,16 +220,21 @@ export const ItineraryPdfUploader: React.FC<ItineraryPdfUploaderProps> = ({
             </div>
           ) : (
             <div className="pdf-drop-content">
-              <div className="pdf-upload-icon-circle">
-                <UploadCloud size={30} className="text-emerald-600" />
+              <div className="pdf-upload-icon-circle compulsory-icon">
+                <UploadCloud size={30} className={required ? "text-red-500" : "text-emerald-600"} />
               </div>
               <div className="text-sm font-bold text-slate-800 mt-2">
-                Click to Upload Itinerary PDF from Computer
+                Click to Upload Itinerary PDF from Computer {required && <span className="text-red-600 font-extrabold">(Compulsory *)</span>}
               </div>
               <p className="text-xs text-slate-500 mt-1 max-w-md">
-                Select your official itinerary PDF (.pdf) from your PC or drag and drop it here.
+                Select your official itinerary PDF (.pdf) from your PC or drag and drop it here. {required && <strong className="text-red-600 font-semibold block mt-0.5">Uploading an official tour itinerary PDF is compulsory to publish.</strong>}
               </p>
               <div className="pdf-dropzone-pills mt-3 flex items-center justify-center gap-2 flex-wrap">
+                {required && (
+                  <span className="drop-pill border-red-300 text-red-700 bg-red-50 font-bold">
+                    ⚠️ Compulsory Upload
+                  </span>
+                )}
                 <span className="drop-pill">📄 PDF Document</span>
                 <span className="drop-pill">⚡ Instant Customer Access</span>
                 <span className="drop-pill">🔒 ₹99 Pay-to-Unlock</span>

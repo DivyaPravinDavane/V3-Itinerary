@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { 
   ChevronDown, Heart, Briefcase, User, LogOut, FileText, 
   Menu, X, LogIn, ShieldCheck, Settings, Compass, Home, 
-  ChevronRight 
+  ChevronRight, Phone 
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface NavbarProps {
   user: UserProfile;
-  currentPage?: 'home' | 'destinations' | 'agent-studio';
+  currentPage?: 'home' | 'destinations' | 'agent-studio' | 'policies';
   onOpenAuth: (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => void;
   onLogout: () => void;
   onOpenDashboard: (tab: 'trips' | 'saved' | 'orders' | 'profile') => void;
@@ -16,7 +16,7 @@ interface NavbarProps {
   onOpenAgentDashboard?: () => void;
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio') => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies', tab?: any) => void;
   isAgentPageOpen?: boolean;
 }
 
@@ -40,6 +40,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isAdmin = user.isLoggedIn && user.role === 'admin';
   const isAgent = user.isLoggedIn && user.role === 'agent';
   const agencyName = user.agentDetails?.agencyName || user.agentDetails?.agency_name || user.fullName || 'Agency Partner';
+
+  const handleContactClick = () => {
+    if (currentPage !== 'home' && onNavigatePage) {
+      onNavigatePage('home');
+      setTimeout(() => onScrollToSection('contact'), 150);
+    } else {
+      onScrollToSection('contact');
+    }
+  };
 
   return (
     <header className="site-header">
@@ -128,6 +137,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
+
+            <button 
+              className="nav-item" 
+              onClick={handleContactClick}
+            >
+              Contact Us
+            </button>
           </nav>
         </div>
 
@@ -315,9 +331,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="auth-buttons">
               <button 
                 className="btn-login-ghost" 
-                onClick={() => onOpenAuth('login')}
+                onClick={() => onOpenAuth('login', 'customer')}
                 id="header-login-btn"
-                title="Sign In (Customer & Admin Portals)"
+                title="Sign In to V3Itinerary"
               >
                 <LogIn size={15} />
                 <span>Login</span>
@@ -325,9 +341,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button 
                 className="btn-signup-solid header-signup-btn" 
-                onClick={() => onOpenAuth('signup')}
+                onClick={() => onOpenAuth('signup', 'customer')}
                 id="header-signup-btn"
-                title="Create an account"
+                title="Create a traveler account"
               >
                 Sign Up
               </button>
@@ -413,6 +429,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <span className="mobile-link-count">{user.savedItineraryIds?.length || 0}</span>
             </button>
+
+            <button 
+              className="mobile-nav-link" 
+              onClick={() => { 
+                handleContactClick();
+                setMobileMenuOpen(false); 
+              }}
+            >
+              <div className="mobile-link-left">
+                <Phone size={17} className="mobile-link-icon text-blue-600" />
+                <span>Contact Us</span>
+              </div>
+              <ChevronRight size={15} className="text-slate-400" />
+            </button>
           </div>
           
           <div className="mobile-nav-auth">
@@ -420,13 +450,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="mobile-auth-row">
                 <button 
                   className="btn-login-ghost full-w" 
-                  onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
+                  onClick={() => { onOpenAuth('login', 'customer'); setMobileMenuOpen(false); }}
                 >
                   <LogIn size={16} /> Login
                 </button>
                 <button 
                   className="btn-signup-solid full-w" 
-                  onClick={() => { onOpenAuth('signup'); setMobileMenuOpen(false); }}
+                  onClick={() => { onOpenAuth('signup', 'customer'); setMobileMenuOpen(false); }}
                 >
                   Sign Up
                 </button>

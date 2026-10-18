@@ -472,10 +472,6 @@ export const DestinationsPage: React.FC<DestinationsPageProps> = ({
             Curated Destinations & Verified Itineraries
           </h1>
 
-          <p className="dest-page-hero-sub">
-            Explore {counts.total} handpicked vacation spots across India and the globe. Every destination features day-by-day itineraries with detailed timings, hotel recommendations, and certified GST travel agents for just ₹99.
-          </p>
-
           {/* Quick Search Form with Live Dropdown & Smooth Scroll */}
           <div ref={searchWrapRef} className="dest-search-outer-wrap">
             <form onSubmit={(e) => handleSearchSubmit(e, true)} className="dest-search-bar-wrap shadow-xl">

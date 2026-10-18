@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Lock, Mail, User, Phone, ShieldCheck, KeyRound, 
+  X, Lock, Mail, User, Phone, ShieldCheck, 
   CheckCircle2, Briefcase, ChevronRight, AlertCircle,
   Eye, EyeOff, Building
 } from 'lucide-react';
@@ -24,16 +24,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onLoginSuccess,
   onOpenAgentOnboarding
 }) => {
-  const [selectedRole, setSelectedRole] = useState<'customer' | 'admin' | 'agent'>(initialRole);
+  const isAgent = initialRole === 'agent';
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
 
-  // Sync role and mode when opened or props change
+  // Sync mode and reset errors when opened or initial props change
   useEffect(() => {
     if (isOpen) {
-      setSelectedRole(initialRole);
       setMode(initialMode);
+      setCustomerError(null);
+      setAgentError(null);
     }
-  }, [isOpen, initialRole, initialMode]);
+  }, [isOpen, initialMode, initialRole]);
 
   // Customer Form State
   const [name, setName] = useState('');
@@ -59,14 +60,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [agentMobile, setAgentMobile] = useState('');
   const [agentGstin, setAgentGstin] = useState('');
   const [agentCity, setAgentCity] = useState('');
-
-  // Admin Form State
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminSecurityPin, setAdminSecurityPin] = useState('');
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminError, setAdminError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -289,38 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  // Handle Admin Submit
-  const handleAdminSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminLoading(true);
-    setAdminError(null);
 
-    const cleanEmail = (adminEmail || 'admin@v3itinerary.com').trim().toLowerCase();
-    const adminData = {
-      fullName: 'V3 Platform Admin',
-      email: cleanEmail,
-      mobile: '+91 98000 11223',
-      whatsapp: '+91 98000 11223',
-      password: adminPassword || 'admin@2026',
-      securityPin: adminSecurityPin || 'V3-SEC-9921',
-      isNewRegistration: false,
-      isLoggedIn: true,
-      role: 'admin' as const
-    };
-    try {
-      await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(adminData)
-      });
-    } catch (err) {
-      console.warn('Admin auth sync notice:', err);
-    } finally {
-      setAdminLoading(false);
-    }
-    onLoginSuccess(adminData);
-    onClose();
-  };
 
 
 
@@ -348,82 +310,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="auth-v3-logo" 
             />
           </div>
+          <div className="auth-v3-pill-wrap">
+            {isAgent ? (
+              <span className="auth-v3-role-pill agent-pill">
+                <Briefcase size={12} />
+                <span>Travel Agent Studio</span>
+              </span>
+            ) : (
+              <span className="auth-v3-role-pill customer-pill">
+                <User size={12} />
+                <span>Traveler Portal</span>
+              </span>
+            )}
+          </div>
           <h3 className="auth-v3-title">
-            Sign In to V3Itinerary
+            {isAgent 
+              ? (mode === 'signup' ? 'Register Travel Agency' : 'Travel Agent Studio Sign In')
+              : (mode === 'signup' ? 'Create Traveler Account' : 'Sign In to V3Itinerary')}
           </h3>
           <p className="auth-v3-subtitle">
-            Select your portal to manage trips, itineraries, or platform operations
+            {isAgent
+              ? (mode === 'signup' 
+                  ? 'Publish itineraries across India and receive verified traveller inquiries'
+                  : 'Access your agency studio, upload itineraries & manage traveler leads')
+              : (mode === 'signup'
+                  ? 'Join V3Itinerary to save custom itineraries, download blueprints & track bookings'
+                  : 'Access your purchased trip blueprints, saved wishlists & personal itineraries')}
           </p>
         </div>
 
-        {/* 2. STRUCTURED THREE-PORTAL TABS */}
-        <div className="auth-v3-portal-bar">
-          {/* Portal 1: Customer */}
-          <button 
-            type="button"
-            className={`auth-v3-portal-tab ${selectedRole === 'customer' ? 'active-customer' : ''}`}
-            onClick={() => {
-              setSelectedRole('customer');
-              setCustomerError(null);
-            }}
-          >
-            <div className="auth-v3-tab-icon customer-icon-bg">
-              <User size={16} />
-            </div>
-            <span className="auth-v3-tab-title">
-              Traveler
-              {selectedRole === 'customer' && (
-                <span className="auth-v3-tab-badge badge-customer">Active</span>
-              )}
-            </span>
-            <span className="auth-v3-tab-desc">Personal Trips</span>
-          </button>
-
-          {/* Portal 2: Travel Agent */}
-          <button 
-            type="button"
-            className={`auth-v3-portal-tab ${selectedRole === 'agent' ? 'active-agent' : ''}`}
-            onClick={() => {
-              setSelectedRole('agent');
-              setAgentError(null);
-            }}
-          >
-            <div className="auth-v3-tab-icon agent-icon-bg">
-              <Briefcase size={16} />
-            </div>
-            <span className="auth-v3-tab-title">
-              Travel Agent
-              {selectedRole === 'agent' && (
-                <span className="auth-v3-tab-badge badge-agent">Active</span>
-              )}
-            </span>
-            <span className="auth-v3-tab-desc">Agency Studio</span>
-          </button>
-
-          {/* Portal 3: Platform Admin */}
-          <button 
-            type="button"
-            className={`auth-v3-portal-tab ${selectedRole === 'admin' ? 'active-admin' : ''}`}
-            onClick={() => {
-              setSelectedRole('admin');
-              setAdminError(null);
-            }}
-          >
-            <div className="auth-v3-tab-icon admin-icon-bg">
-              <ShieldCheck size={16} />
-            </div>
-            <span className="auth-v3-tab-title">
-              Admin
-              {selectedRole === 'admin' && (
-                <span className="auth-v3-tab-badge badge-admin">Active</span>
-              )}
-            </span>
-            <span className="auth-v3-tab-desc">Super Console</span>
-          </button>
-        </div>
-
         {/* ─── PORTAL 1: CUSTOMER (TRAVELER) ────────────────────────────────── */}
-        {selectedRole === 'customer' && (
+        {!isAgent && (
           <div className="animate-fade-in">
             {/* Sub-Switch: Sign In vs Create Account */}
             <div className="auth-tab-switch">
@@ -567,11 +484,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : (mode === 'login' ? 'Sign In as Traveler' : 'Create Traveler Account')}
               </button>
             </form>
+
+            {/* Traveler Switch CTA */}
+            <div className="auth-v3-footer">
+              <span className="auth-v3-footer-prompt">
+                {mode === 'signup' ? 'Already have a traveler account?' : "Don't have an account yet?"}
+              </span>
+              <button 
+                type="button"
+                className="auth-v3-footer-btn"
+                onClick={() => {
+                  setCustomerError(null);
+                  setMode(mode === 'signup' ? 'login' : 'signup');
+                }}
+              >
+                <span>{mode === 'signup' ? 'Sign In to Account' : 'Create New Account'}</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
           </div>
         )}
 
         {/* ─── PORTAL 2: TRAVEL AGENT (B2B STUDIO) ──────────────────── */}
-        {selectedRole === 'agent' && (
+        {isAgent && (
           <div className="animate-fade-in">
             {/* Agency Banner Card */}
             <div className="auth-v3-banner agent-banner">
@@ -869,108 +804,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* ─── PORTAL 3: PLATFORM ADMIN ─────────────────────────────────────── */}
-        {selectedRole === 'admin' && (
-          <div className="animate-fade-in">
-            <div className="auth-v3-banner admin-banner">
-              <div className="auth-v3-banner-icon">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <h4 className="auth-v3-banner-title">
-                  V3 Platform Administration Gateway
-                </h4>
-                <p className="auth-v3-banner-sub">
-                  Restricted to platform managers and KYC compliance operations staff.
-                </p>
-              </div>
-            </div>
 
-            {/* Error Notification */}
-            {adminError && (
-              <div className="auth-error-alert">
-                <AlertCircle size={15} className="shrink-0" />
-                <span>{adminError}</span>
-              </div>
-            )}
-
-            {/* Admin Credentials Form */}
-            <form onSubmit={handleAdminSubmit} className="auth-v3-form">
-              <div className="auth-v3-field-group">
-                <div className="auth-v3-label-row">
-                  <label className="auth-v3-label">Admin Email Address *</label>
-                </div>
-                <div className="auth-v3-input-wrapper">
-                  <Mail size={16} className="auth-v3-input-icon" />
-                  <input 
-                    type="email" 
-                    value={adminEmail} 
-                    onChange={(e) => setAdminEmail(e.target.value)} 
-                    placeholder="admin@v3itinerary.com"
-                    className="auth-v3-input admin-focus"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="auth-v3-field-group">
-                <div className="auth-v3-label-row">
-                  <label className="auth-v3-label">Master Admin Password *</label>
-                </div>
-                <div className="auth-v3-input-wrapper">
-                  <Lock size={16} className="auth-v3-input-icon" />
-                  <input 
-                    type={showAdminPassword ? 'text' : 'password'} 
-                    value={adminPassword} 
-                    onChange={(e) => setAdminPassword(e.target.value)} 
-                    placeholder="••••••••"
-                    className="auth-v3-input admin-focus"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminPassword(!showAdminPassword)}
-                    className="auth-v3-eye-btn"
-                    tabIndex={-1}
-                    aria-label="Toggle password visibility"
-                  >
-                    {showAdminPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="auth-v3-field-group">
-                <div className="auth-v3-label-row">
-                  <label className="auth-v3-label">Admin Security Passkey / 2FA Token</label>
-                </div>
-                <div className="auth-v3-input-wrapper">
-                  <KeyRound size={16} className="auth-v3-input-icon" />
-                  <input 
-                    type="text" 
-                    value={adminSecurityPin} 
-                    onChange={(e) => setAdminSecurityPin(e.target.value)} 
-                    placeholder="V3-SEC-9921"
-                    className="auth-v3-input admin-focus"
-                  />
-                </div>
-              </div>
-
-              <div className="auth-v3-notice-strip admin-strip">
-                <CheckCircle2 size={15} className="text-indigo-600 shrink-0" />
-                <span>SSL Encrypted Session • Audit trail logged under GSTIN guidelines</span>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={adminLoading}
-                className="auth-v3-submit-btn admin-btn"
-              >
-                <ShieldCheck size={18} />
-                <span>{adminLoading ? 'Authenticating...' : 'Sign In to Admin Console'}</span>
-              </button>
-            </form>
-          </div>
-        )}
       </div>
     </div>
   );

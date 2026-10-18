@@ -34,6 +34,7 @@ import { registerAgentInBackend, uploadDocumentToBackend } from '../utils/api';
 interface TravelAgentOnboardingPageProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenLogin?: () => void;
 }
 
 const INDIAN_CITIES = [
@@ -52,7 +53,8 @@ const INDIAN_STATES = [
 
 export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onOpenLogin
 }) => {
   // Step 1: Basic Details
   const [agencyName, setAgencyName] = useState('');
@@ -255,6 +257,19 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
               <span className="text-primary-navy font-bold text-sm">itinerary</span>
               <span className="agent-tag-badge">Partner Portal</span>
             </div>
+            {onOpenLogin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenLogin();
+                }}
+                className="agent-login-shortcut-btn"
+                title="Log In with registered GSTIN or agency credentials"
+              >
+                Already Registered? Log In
+              </button>
+            )}
           </div>
           <button 
             className="agent-close-btn"

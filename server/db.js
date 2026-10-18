@@ -1017,7 +1017,7 @@ export async function getAllDestinations() {
   );
   return rows.map(r => ({
     ...r,
-    galleryImages: typeof r.gallery_images_json === 'string' ? JSON.parse(r.gallery_images_json || '[]') : (r.gallery_images_json || [])
+    galleryImages: safeJsonParse(r.gallery_images_json, [])
   }));
 }
 
@@ -1030,7 +1030,7 @@ export async function getDestinationById(idOrSlug) {
   const r = rows[0];
   return {
     ...r,
-    galleryImages: typeof r.gallery_images_json === 'string' ? JSON.parse(r.gallery_images_json || '[]') : (r.gallery_images_json || [])
+    galleryImages: safeJsonParse(r.gallery_images_json, [])
   };
 }
 

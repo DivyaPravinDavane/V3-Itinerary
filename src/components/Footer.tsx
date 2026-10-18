@@ -1,23 +1,35 @@
 import React from 'react';
 import { ShieldCheck, Mail, Phone, MapPin } from 'lucide-react';
+import type { PolicyTabKey } from '../data/legalPoliciesData';
 
 interface FooterProps {
   onOpenAgentModal: () => void;
+  onOpenAgentLogin?: () => void;
   onScrollToSection: (sectionId: string) => void;
   onSelectDestination: (name: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio') => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies', tab?: PolicyTabKey) => void;
   onOpenAgentDashboard?: () => void;
   isAgent?: boolean;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAgentModal,
+  onOpenAgentLogin,
   onScrollToSection,
   onSelectDestination,
   onNavigatePage,
   onOpenAgentDashboard,
   isAgent
 }) => {
+  const handlePolicyClick = (tab: PolicyTabKey) => {
+    if (onNavigatePage) {
+      onNavigatePage('policies', tab);
+    } else {
+      window.location.hash = `#${tab}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <footer className="site-footer" id="footer">
       <div className="footer-top-container">
@@ -40,7 +52,12 @@ export const Footer: React.FC<FooterProps> = ({
           <p className="footer-about-p">
             India's trusted platform for verified travel itineraries. We connect travelers with certified local travel agents to get authentic, ready-to-use trip plans for just ₹99.
           </p>
-          <div className="footer-gst-badge">
+          <div 
+            className="footer-gst-badge"
+            onClick={() => handlePolicyClick('gst')}
+            title="Click to view official GST compliance guidelines"
+            style={{ cursor: 'pointer' }}
+          >
             <ShieldCheck size={16} className="text-emerald-400" />
             <span>100% Mandatory GST Verification for all Travel Planners</span>
           </div>
@@ -66,9 +83,9 @@ export const Footer: React.FC<FooterProps> = ({
           </ul>
         </div>
 
-        {/* Col 3: Platform, Agents & About */}
+        {/* Col 3: Platform, Agents & Legal Links */}
         <div className="footer-col">
-          <h4 className="footer-col-title">Platform & Agents</h4>
+          <h4 className="footer-col-title">Platform & Trust</h4>
           <ul className="footer-links-list">
             <li>
               <button onClick={() => {
@@ -90,25 +107,28 @@ export const Footer: React.FC<FooterProps> = ({
               <button onClick={() => {
                 if (isAgent && onNavigatePage) {
                   onNavigatePage('agent-studio');
-                } else if (isAgent && onOpenAgentDashboard) {
+                } else if (onOpenAgentLogin) {
+                  onOpenAgentLogin();
+                } else if (onOpenAgentDashboard) {
                   onOpenAgentDashboard();
                 } else {
                   onOpenAgentModal();
                 }
               }}>
-                Agent Studio (Partner Portal)
+                Travel Agent Login (Studio Portal)
               </button>
             </li>
             <li><button onClick={onOpenAgentModal}>For Travel Agents (Join with GSTIN)</button></li>
             <li><button onClick={() => onScrollToSection('how-it-works')}>How It Works (4 Steps)</button></li>
-            <li><button onClick={() => onScrollToSection('trust-pillars')}>About Us & Buyer Protection</button></li>
-            <li><button onClick={() => onScrollToSection('trust-pillars')}>Pricing Transparency (₹99 Rule)</button></li>
-            <li><button onClick={() => onScrollToSection('footer')}>Contact Customer Concierge</button></li>
+            <li><button onClick={() => handlePolicyClick('terms')}>Terms and Conditions</button></li>
+            <li><button onClick={() => handlePolicyClick('privacy')}>Privacy Policy</button></li>
+            <li><button onClick={() => handlePolicyClick('refund')}>Refund Policy</button></li>
+            <li><button onClick={() => handlePolicyClick('gst')}>GST Compliance Guidelines</button></li>
           </ul>
         </div>
 
         {/* Col 4: Support & Contact */}
-        <div className="footer-col contact-col">
+        <div className="footer-col contact-col" id="contact">
           <h4 className="footer-col-title">Customer Concierge</h4>
           <div className="footer-contact-item">
             <Phone size={15} className="text-blue-400" />
@@ -132,19 +152,45 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
       </div>
 
+      {/* Footer Bottom Bar with Clean Word Links to Other Pages */}
       <div className="footer-bottom-bar">
         <div className="footer-bottom-inner">
           <p className="copyright-text">
             © {new Date().getFullYear()} V3Itinerary Platforms India Pvt Ltd. All rights reserved.
           </p>
+
           <div className="footer-legal-links">
-            <a href="#privacy">Privacy Policy</a>
-            <span>•</span>
-            <a href="#terms">Terms of Service</a>
-            <span>•</span>
-            <a href="#gst-compliance">GST Compliance Guidelines</a>
-            <span>•</span>
-            <a href="#refund">Instant Digital Access Policy</a>
+            <button 
+              type="button" 
+              onClick={() => handlePolicyClick('privacy')}
+              className="footer-legal-btn"
+            >
+              Privacy Policy
+            </button>
+            <span className="footer-legal-sep">•</span>
+            <button 
+              type="button" 
+              onClick={() => handlePolicyClick('terms')}
+              className="footer-legal-btn"
+            >
+              Terms and Conditions
+            </button>
+            <span className="footer-legal-sep">•</span>
+            <button 
+              type="button" 
+              onClick={() => handlePolicyClick('refund')}
+              className="footer-legal-btn"
+            >
+              Refund Policy
+            </button>
+            <span className="footer-legal-sep">•</span>
+            <button 
+              type="button" 
+              onClick={() => handlePolicyClick('gst')}
+              className="footer-legal-btn"
+            >
+              GST Compliance
+            </button>
           </div>
         </div>
       </div>
