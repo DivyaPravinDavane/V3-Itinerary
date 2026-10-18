@@ -1,18 +1,23 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
 
 // ─── MySQL Configuration ────────────────────────────────────────────────────
 // Uses Unix socket for the local tarball MySQL (no Homebrew needed),
-// falls back to TCP host/port if socket not found.
+// falls back to TCP host/port if socket not found or in production/remote.
 const MYSQL_SOCKET = '/tmp/mysql_v3.sock';
 
+const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
 const isRemote = Boolean(
-  process.env.DB_HOST && 
-  process.env.DB_HOST !== 'localhost' && 
-  process.env.DB_HOST !== '127.0.0.1'
+  (process.env.DB_HOST && 
+   process.env.DB_HOST !== 'localhost' && 
+   process.env.DB_HOST !== '127.0.0.1') ||
+  isProduction
 );
+
+const hasLocalSocket = !isRemote && fs.existsSync(MYSQL_SOCKET);
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -20,11 +25,14 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'v3_itinerary',
-  ...(isRemote ? {} : { socketPath: MYSQL_SOCKET }),
+  ...(hasLocalSocket ? { socketPath: MYSQL_SOCKET } : {}),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  timezone: '+00:00'
+  timezone: '+00:00',
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 20000
 };
 
 let mysqlPool = null;
@@ -34,7 +42,7 @@ let mysqlError = null;
 // ─── Initialize MySQL ────────────────────────────────────────────────────────
 async function initMysql() {
   try {
-    if (!isRemote) {
+    if (!isRemote && hasLocalSocket) {
       try {
         const rootConn = await mysql.createConnection({
           socketPath: MYSQL_SOCKET,
@@ -306,7 +314,11 @@ async function initMysql() {
     isMysqlConnected = false;
     mysqlError = err.message;
     console.error(`❌ [MySQL] Connection failed: ${err.message}`);
-    console.error('   Make sure MySQL is running: node server/startMysql.js');
+    if (!isRemote) {
+      console.error('   Make sure MySQL is running: node server/startMysql.js');
+    } else {
+      console.error(`   Check DB credentials & Hostinger Remote MySQL access for host: ${dbConfig.host}:${dbConfig.port}`);
+    }
     throw err;  // Hard fail — MySQL is required
   }
 }

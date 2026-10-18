@@ -50,7 +50,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = process.env.HOST || '0.0.0.0';
 
 // SSE (Server-Sent Events) real-time clients
 const realtimeClients = new Set();
@@ -768,10 +769,12 @@ function startDatabaseChangeDetector(pool) {
     } catch {
       // Ignore intermittent network blips
     }
-  }, 1500);
+  }, DB_POLL_INTERVAL);
 }
 
-// ─── Static Frontend Serving (Production) ────────────────────────────────────
+const DB_POLL_INTERVAL = parseInt(process.env.DB_POLL_INTERVAL || '5000', 10);
+
+// ─── Static Frontend Serving (Production) & Root API Route ──────────────────
 const distPath = fs.existsSync(path.join(__dirname, '../dist'))
   ? path.join(__dirname, '../dist')
   : (fs.existsSync(path.join(__dirname, './dist')) ? path.join(__dirname, './dist') : null);
@@ -784,6 +787,24 @@ if (distPath) {
     }
     res.sendFile(path.join(distPath, 'index.html'));
   });
+} else {
+  // If dist is not present (backend-only deployment on Render), serve API status on root
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'online',
+      service: 'V3Itinerary MySQL Real-Time API',
+      database: getDbStatus(),
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/api/health',
+        stream: '/api/realtime/stream',
+        itineraries: '/api/itineraries',
+        destinations: '/api/destinations',
+        popular: '/api/destinations/popular'
+      },
+      message: 'V3 Itinerary backend API is online and operational.'
+    });
+  });
 }
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
@@ -791,16 +812,18 @@ async function startServer() {
   try {
     await initDatabase();
     startDatabaseChangeDetector(getMysqlPool());
-    app.listen(PORT, () => {
-      console.log(`\n🚀 V3Itinerary MySQL API running on http://localhost:${PORT}`);
-      console.log(`📡 SSE Stream: http://localhost:${PORT}/api/realtime/stream`);
-      console.log(`📦 Itineraries: http://localhost:${PORT}/api/itineraries`);
-      console.log(`🌟 Popular: http://localhost:${PORT}/api/destinations/popular\n`);
+    app.listen(PORT, HOST, () => {
+      console.log(`\n🚀 V3Itinerary MySQL API running on http://${HOST}:${PORT}`);
+      console.log(`📡 SSE Stream: http://${HOST}:${PORT}/api/realtime/stream`);
+      console.log(`📦 Itineraries: http://${HOST}:${PORT}/api/itineraries`);
+      console.log(`🌟 Popular: http://${HOST}:${PORT}/api/destinations/popular\n`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
-    console.error('\nTo start MySQL, run:');
-    console.error('  node server/startMysql.js\n');
+    if (process.env.NODE_ENV !== 'production' && !process.env.RENDER) {
+      console.error('\nTo start MySQL locally, run:');
+      console.error('  node server/startMysql.js\n');
+    }
     process.exit(1);
   }
 }
