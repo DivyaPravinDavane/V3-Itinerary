@@ -1,12 +1,100 @@
 {
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "/api/health.js"
+    },
+    {
+      "source": "/api/realtime/stats",
+      "destination": "/api/stats.js?action=stats"
+    },
+    {
+      "source": "/api/realtime/activities",
+      "destination": "/api/stats.js?action=activities"
+    },
+    {
+      "source": "/api/orders/initiate",
+      "destination": "/api/orders.js?action=initiate"
+    },
+    {
+      "source": "/api/orders/update-status",
+      "destination": "/api/orders.js?action=update-status"
+    },
+    {
+      "source": "/api/orders/:orderId",
+      "destination": "/api/orders.js?orderId=:orderId"
+    },
+    {
+      "source": "/api/orders",
+      "destination": "/api/orders.js"
+    },
+    {
+      "source": "/api/payments",
+      "destination": "/api/orders.js?action=payments"
+    },
+    {
+      "source": "/api/agents/register",
+      "destination": "/api/agents.js?action=register"
+    },
+    {
+      "source": "/api/agents/:id/status",
+      "destination": "/api/agents.js?id=:id&action=status"
+    },
+    {
+      "source": "/api/agent/profile",
+      "destination": "/api/agents.js?action=profile"
+    },
+    {
+      "source": "/api/agents",
+      "destination": "/api/agents.js"
+    },
+    {
+      "source": "/api/auth/login",
+      "destination": "/api/auth.js?action=login"
+    },
+    {
+      "source": "/api/auth/(.*)",
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/api/wishlist/toggle",
+      "destination": "/api/wishlist.js?action=toggle"
+    },
+    {
+      "source": "/api/wishlist",
+      "destination": "/api/wishlist.js"
+    },
+    {
+      "source": "/api/destinations/popular",
+      "destination": "/api/destinations.js?action=popular"
+    },
+    {
+      "source": "/api/destinations/:id",
+      "destination": "/api/destinations.js?id=:id"
+    },
+    {
+      "source": "/api/destinations",
+      "destination": "/api/destinations.js"
+    },
+    {
+      "source": "/api/itineraries/:id/featured",
+      "destination": "/api/itineraries.js?id=:id&action=featured"
+    },
+    {
       "source": "/api/itineraries/:id",
       "destination": "/api/itineraries.js?id=:id"
     },
     {
+      "source": "/api/itineraries",
+      "destination": "/api/itineraries.js"
+    },
+    {
       "source": "/api/agent-created-itineraries/:id",
       "destination": "/api/agent-created-itineraries.js?id=:id"
+    },
+    {
+      "source": "/api/agent-created-itineraries",
+      "destination": "/api/agent-created-itineraries.js"
     },
     {
       "source": "/api/(.*)",

@@ -423,10 +423,23 @@ export async function uploadDocumentToBackend(file: File): Promise<{
           resolve(data);
           return;
         }
-        resolve(null);
+        resolve({
+          success: true,
+          url: fileBase64,
+          fileName: file.name,
+          originalName: file.name,
+          size: file.size
+        });
       } catch (err) {
-        console.warn('Document upload error:', err);
-        resolve(null);
+        console.warn('Document upload fallback to data URL:', err);
+        const fileBase64 = reader.result as string;
+        resolve({
+          success: true,
+          url: fileBase64,
+          fileName: file.name,
+          originalName: file.name,
+          size: file.size
+        });
       }
     };
     reader.onerror = () => resolve(null);

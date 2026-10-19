@@ -144,7 +144,7 @@ export default async function handler(req, res) {
           pdf_name = VALUES(pdf_name),
           status = 'PUBLISHED';
       `, [
-        itinId, it.title, it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
+        itinId, it.title || 'Itinerary', it.destination || 'Destination', it.country || 'India', it.region || 'Domestic',
         it.durationDays || 5, it.durationNights || 4, it.travelerType || 'Family',
         it.totalAccessPrice || 99, it.estimatedTripCost || 55000,
         agencyName, founderName, agentGst, agentPhone, agentEmail, agentCity, agentState,
