@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, ArrowLeft, Loader2, Mail, User, Smartphone, 
-  MapPin, Lock, CheckCircle2, AlertCircle, FileText, Check
+  MapPin, Lock, CheckCircle2, AlertCircle, FileText, Check, CreditCard
 } from 'lucide-react';
 import type { Itinerary } from '../types';
 import { initiateOrderInBackend, updateOrderStatusInBackend } from '../utils/api';
+import { GPayScanner } from './GPayScanner';
 
 export interface CustomerDetails {
   name: string;
@@ -30,6 +31,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
   onSuccess,
   onCancel
 }) => {
+  const [paymentMode, setPaymentMode] = useState<'gpay' | 'razorpay'>('gpay');
   const [name, setName] = useState(customerName || '');
   const [phone, setPhone] = useState((customerMobile || '').replace(/[^0-9]/g, '').slice(-10));
   const [email, setEmail] = useState(customerEmail || '');
@@ -37,6 +39,45 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId] = useState(() => `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`);
+
+  // Handle direct GPay QR Scanner payment completion
+  const handleGPayPaymentSuccess = async (pid: string) => {
+    const cleanPhone = phone.replace(/[^0-9]/g, '') || '9820389694';
+    const finalEmail = email.trim() || 'traveler@v3itinerary.com';
+    const finalName = name.trim() || 'Valued Traveler';
+    const finalAddress = address.trim() || 'Digital Delivery';
+
+    try {
+      await initiateOrderInBackend({
+        orderId,
+        itineraryId: itinerary.id,
+        itineraryTitle: itinerary.title,
+        destination: itinerary.destination,
+        customerName: finalName,
+        customerEmail: finalEmail,
+        customerMobile: cleanPhone,
+        customerAddress: finalAddress,
+        amountPaid: 99.00,
+        agentName: itinerary.agent?.agencyName || 'Verified Agent',
+        agentPhone: itinerary.agent?.phone || '',
+        agentEmail: itinerary.agent?.email || '',
+        agentWhatsapp: itinerary.agent?.whatsapp || ''
+      });
+
+      await updateOrderStatusInBackend(orderId, 'PAID', {
+        razorpayPaymentId: pid
+      });
+    } catch (err) {
+      console.warn('Backend order initiation logged:', err);
+    }
+
+    onSuccess(pid, orderId, finalEmail, {
+      name: finalName,
+      address: finalAddress,
+      phone: cleanPhone,
+      email: finalEmail
+    });
+  };
 
   // Handle Cancel & Return button click
   const handleCancelAndReturn = () => {
@@ -120,7 +161,8 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         prefill: {
           name: name.trim(),
           email: email.trim(),
-          contact: cleanPhone
+          contact: cleanPhone,
+          method: 'upi'
         },
         notes: {
           address: address.trim(),
@@ -252,11 +294,54 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
               RIGHT COLUMN: Customer Details Form -> Direct Razorpay Redirect
               ========================================================================= */}
           <div className="rzp-main-panel">
+            {/* Payment Method Selector Tabs */}
+            <div className="flex border-b border-slate-200 mb-6 bg-slate-50/80 rounded-xl p-1.5 gap-1.5 border">
+              <button
+                type="button"
+                onClick={() => setPaymentMode('gpay')}
+                className={`flex-1 py-3 px-3 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  paymentMode === 'gpay'
+                    ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                id="tab-gpay-scanner"
+              >
+                <div className="gpay-dots-icon">
+                  <span className="dot-blue"></span>
+                  <span className="dot-red"></span>
+                  <span className="dot-yellow"></span>
+                  <span className="dot-green"></span>
+                </div>
+                <span>Google Pay / UPI QR</span>
+                <span className="px-1.5 py-0.5 text-[10px] bg-emerald-100 text-emerald-800 rounded font-black">SCANNER</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMode('razorpay')}
+                className={`flex-1 py-3 px-3 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  paymentMode === 'razorpay'
+                    ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                id="tab-razorpay-checkout"
+              >
+                <CreditCard size={16} className="text-slate-600" />
+                <span>Cards / NetBanking</span>
+              </button>
+            </div>
+
             <div className="rzp-form-header">
-              <div className="rzp-form-title-badge">Customer & Delivery Details</div>
-              <h3 className="rzp-form-title">Enter your details to proceed to Razorpay</h3>
+              <div className="rzp-form-title-badge">
+                {paymentMode === 'gpay' ? 'Instant Google Pay Scanner' : 'Customer & Delivery Details'}
+              </div>
+              <h3 className="rzp-form-title">
+                {paymentMode === 'gpay' ? 'Scan & Pay ₹99 with Google Pay' : 'Enter your details to proceed to Razorpay'}
+              </h3>
               <p className="rzp-form-sub">
-                Enter your name, address, and phone number. Your authentic phone number and Gmail will be sent directly to Razorpay for secure checkout.
+                {paymentMode === 'gpay'
+                  ? 'Scan the dynamic QR code using Google Pay, PhonePe, Paytm or BHIM on your phone for instant itinerary delivery.'
+                  : 'Enter your name, address, and phone number. Your authentic phone number and Gmail will be sent directly to Razorpay for secure checkout.'}
               </p>
             </div>
 
@@ -267,17 +352,16 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
               </div>
             )}
 
-            <form 
-              className="rzp-checkout-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleProceedToRazorpay();
-              }}
-            >
-              {/* 1. Full Name */}
-              <div className="rzp-form-group">
+            {/* Delivery Contact Details (Name, Phone, Email) */}
+            <div className="mb-5 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                1. Delivery Contact Details (Itinerary PDF will be dispatched here)
+              </div>
+              
+              {/* Full Name */}
+              <div className="rzp-form-group mb-3">
                 <label className="rzp-field-label">
-                  <User size={15} className="text-blue-600" />
+                  <User size={14} className="text-blue-600" />
                   <span>Full Name <span className="text-rose-500">*</span></span>
                 </label>
                 <input 
@@ -290,11 +374,11 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
                 />
               </div>
 
-              {/* 2. Phone Number & Gmail in 2 Columns */}
+              {/* Phone & Gmail */}
               <div className="rzp-form-row-2col">
                 <div className="rzp-form-group">
                   <label className="rzp-field-label">
-                    <Smartphone size={15} className="text-blue-600" />
+                    <Smartphone size={14} className="text-blue-600" />
                     <span>Phone Number <span className="text-rose-500">*</span></span>
                   </label>
                   <div className="rzp-phone-input-wrap">
@@ -316,7 +400,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
 
                 <div className="rzp-form-group">
                   <label className="rzp-field-label">
-                    <Mail size={15} className="text-blue-600" />
+                    <Mail size={14} className="text-blue-600" />
                     <span>Gmail / Email <span className="text-rose-500">*</span></span>
                   </label>
                   <input 
@@ -329,62 +413,89 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
                   />
                 </div>
               </div>
+            </div>
 
-              {/* 3. Address */}
-              <div className="rzp-form-group">
-                <label className="rzp-field-label">
-                  <MapPin size={15} className="text-blue-600" />
-                  <span>Address <span className="text-rose-500">*</span></span>
-                  <span className="rzp-label-hint">(Billing / Residential Address)</span>
-                </label>
-                <textarea 
-                  rows={2}
-                  className="rzp-text-input rzp-textarea"
-                  value={address}
-                  onChange={(e) => { setAddress(e.target.value); setErrorMessage(''); }}
-                  placeholder="House/Flat No., Street, Area, City, State, Pincode"
-                  required
+            {/* TAB 1: Direct Google Pay QR Scanner */}
+            {paymentMode === 'gpay' && (
+              <div className="animate-fade-in">
+                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  2. Scan with Google Pay to Pay ₹99
+                </div>
+                <GPayScanner 
+                  amount={99.00}
+                  orderId={orderId}
+                  destination={itinerary.destination}
+                  itineraryTitle={itinerary.title}
+                  onPaymentComplete={handleGPayPaymentSuccess}
                 />
               </div>
+            )}
 
-              {/* Submit Button */}
-              <button 
-                type="submit"
-                className="btn-rzp-submit-primary shadow-lg"
-                disabled={isProcessing}
+            {/* TAB 2: Official Razorpay Standard Form */}
+            {paymentMode === 'razorpay' && (
+              <form 
+                className="rzp-checkout-form animate-fade-in"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleProceedToRazorpay();
+                }}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin text-white" />
-                    <span>Opening Razorpay Gateway...</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="btn-rzp-submit-inner">
-                      <Lock size={17} />
-                      <span>Proceed to Pay ₹99 via Razorpay</span>
-                    </div>
-                    <span className="btn-rzp-arrow">→</span>
-                  </>
-                )}
-              </button>
+                {/* 3. Address */}
+                <div className="rzp-form-group">
+                  <label className="rzp-field-label">
+                    <MapPin size={15} className="text-blue-600" />
+                    <span>Address <span className="text-rose-500">*</span></span>
+                    <span className="rzp-label-hint">(Billing / Residential Address)</span>
+                  </label>
+                  <textarea 
+                    rows={2}
+                    className="rzp-text-input rzp-textarea"
+                    value={address}
+                    onChange={(e) => { setAddress(e.target.value); setErrorMessage(''); }}
+                    placeholder="House/Flat No., Street, Area, City, State, Pincode"
+                    required
+                  />
+                </div>
 
-              {/* Trust & Guarantee Strip */}
-              <div className="rzp-guarantee-strip">
-                <div className="rzp-trust-bullet">
-                  <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                  <span>Official Razorpay 256-Bit SSL</span>
-                </div>
-                <div className="rzp-trust-bullet">
-                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-                  <span>Instant PDF Itinerary Dispatch</span>
-                </div>
-                <div className="rzp-trust-bullet">
-                  <FileText size={14} className="text-emerald-600 shrink-0" />
-                  <span>Zero Hidden Charges</span>
-                </div>
+                {/* Submit Button */}
+                <button 
+                  type="submit"
+                  className="btn-rzp-submit-primary shadow-lg"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin text-white" />
+                      <span>Opening Razorpay Gateway...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="btn-rzp-submit-inner">
+                        <Lock size={17} />
+                        <span>Proceed to Pay ₹99 via Razorpay</span>
+                      </div>
+                      <span className="btn-rzp-arrow">→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Trust & Guarantee Strip */}
+            <div className="rzp-guarantee-strip mt-4">
+              <div className="rzp-trust-bullet">
+                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                <span>Official Razorpay 256-Bit SSL</span>
               </div>
-            </form>
+              <div className="rzp-trust-bullet">
+                <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                <span>Instant PDF Itinerary Dispatch</span>
+              </div>
+              <div className="rzp-trust-bullet">
+                <FileText size={14} className="text-emerald-600 shrink-0" />
+                <span>Zero Hidden Charges</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

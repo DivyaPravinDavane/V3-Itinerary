@@ -20,9 +20,22 @@ export const hasCustomRazorpayKey = (): boolean => {
     key && 
     typeof key === 'string' && 
     key.trim().length > 10 && 
-    key.startsWith('rzp_test_') && 
+    (key.startsWith('rzp_test_') || key.startsWith('rzp_live_')) && 
     key !== 'rzp_test_1DP5mmOlF5G5ag' &&
+    key !== 'rzp_test_Tedd2fb7VdKGOl' &&
     key !== 'your_razorpay_key_id_here'
+  );
+};
+
+/**
+ * Checks whether Razorpay is configured with a real LIVE merchant key (rzp_live_...)
+ */
+export const isRazorpayLiveMode = (): boolean => {
+  const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  return Boolean(
+    key && 
+    typeof key === 'string' && 
+    key.trim().startsWith('rzp_live_')
   );
 };
 

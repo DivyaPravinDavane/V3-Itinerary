@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CreditCard, Smartphone, Building, Check, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, CreditCard, Smartphone, Building, Loader2, CheckCircle2 } from 'lucide-react';
 import type { Itinerary } from '../types';
-import { hasCustomRazorpayKey } from '../utils/razorpay';
+import { hasCustomRazorpayKey, isRazorpayLiveMode } from '../utils/razorpay';
+import { GPayScanner } from './GPayScanner';
 
 interface RazorpayModalProps {
   itinerary: Itinerary | null;
@@ -21,12 +22,12 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
   customerMobile
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
-  const [upiVpa, setUpiVpa] = useState('traveller@okaxis');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState<string>('');
   
-  // Read real Razorpay test API key from .env file
+  // Read Razorpay API key from .env / Vercel
   const isCustomKey = hasCustomRazorpayKey();
+  const isLive = isRazorpayLiveMode();
   const apiKey = (import.meta.env.VITE_RAZORPAY_KEY_ID || '').trim();
   const [sdkReady, setSdkReady] = useState(false);
 
@@ -71,7 +72,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
     }
 
     setIsProcessing(true);
-    setProcessingStep('Connecting to Razorpay gateway...');
+    setProcessingStep(isLive ? 'Connecting to Official Razorpay Live Gateway...' : 'Connecting to Razorpay gateway...');
     try {
       if (typeof (window as any).Razorpay !== 'undefined') {
         const options = {
@@ -97,6 +98,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
           modal: {
             ondismiss: function () {
               setIsProcessing(false);
+              setProcessingStep('');
             }
           }
         };
@@ -104,16 +106,32 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
         const rzp = new (window as any).Razorpay(options);
         rzp.on('payment.failed', function (resp: any) {
           console.warn('Razorpay popup error:', resp);
-          // Auto fallback to test sandbox approval so the user is never blocked
-          handleSimulatePayment();
+          setIsProcessing(false);
+          setProcessingStep('');
+          if (!isLive) {
+            handleSimulatePayment();
+          } else {
+            alert(resp.error?.description || 'Payment was declined or cancelled. Please try again.');
+          }
         });
         rzp.open();
       } else {
-        handleSimulatePayment();
+        if (!isLive) {
+          handleSimulatePayment();
+        } else {
+          setIsProcessing(false);
+          alert('Razorpay Checkout SDK is still loading. Please refresh and try again.');
+        }
       }
-    } catch (err) {
-      console.warn('Razorpay popup blocked or failed, executing test payment:', err);
-      handleSimulatePayment();
+    } catch (err: any) {
+      console.warn('Razorpay popup error:', err);
+      setIsProcessing(false);
+      setProcessingStep('');
+      if (!isLive) {
+        handleSimulatePayment();
+      } else {
+        alert(err?.message || 'Unable to open Razorpay gateway. Please check your connection.');
+      }
     }
   };
 
@@ -172,32 +190,13 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
         <div className="rzp-body">
           {selectedMethod === 'upi' && (
             <div className="rzp-upi-section">
-              <p className="rzp-section-label">Pay with Any UPI App</p>
-              <div className="upi-apps-row">
-                <div className="upi-app-pill active">
-                  <span className="app-dot gpay">G</span> Google Pay
-                </div>
-                <div className="upi-app-pill">
-                  <span className="app-dot phonepe">P</span> PhonePe
-                </div>
-                <div className="upi-app-pill">
-                  <span className="app-dot paytm">Pay</span> Paytm
-                </div>
-              </div>
-
-              <div className="upi-input-group">
-                <label className="input-lbl">Or Enter Virtual Payment Address (VPA / UPI ID)</label>
-                <div className="upi-input-wrapper">
-                  <input 
-                    type="text" 
-                    value={upiVpa} 
-                    onChange={(e) => setUpiVpa(e.target.value)}
-                    placeholder="mobile@upi or username@okhdfcbank"
-                    className="upi-text-input"
-                  />
-                  <span className="upi-verified-badge"><Check size={14} /> Verified</span>
-                </div>
-              </div>
+              <GPayScanner 
+                amount={totalPayable}
+                orderId={generatedOrderId}
+                destination={itinerary.destination}
+                itineraryTitle={itinerary.title}
+                onPaymentComplete={(pid) => onSuccess(pid, generatedOrderId)}
+              />
             </div>
           )}
 
@@ -269,22 +268,24 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
-              className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200 transition-colors flex items-center justify-center gap-1.5"
-              onClick={handleSimulatePayment}
-              disabled={isProcessing}
-              id="btn-instant-test-approve"
-            >
-              <CheckCircle2 size={14} className="text-emerald-600" />
-              <span>⚡ Instant Test Simulation (Auto-Approve ₹99)</span>
-            </button>
+            {!isLive && (
+              <button
+                type="button"
+                className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200 transition-colors flex items-center justify-center gap-1.5"
+                onClick={handleSimulatePayment}
+                disabled={isProcessing}
+                id="btn-instant-test-approve"
+              >
+                <CheckCircle2 size={14} className="text-emerald-600" />
+                <span>⚡ Instant Test Simulation (Auto-Approve ₹99)</span>
+              </button>
+            )}
           </div>
 
           {/* Security Compliance Footer */}
           <div className="rzp-footer-security">
             <ShieldCheck size={14} className="text-emerald-600" />
-            <span>Razorpay Test Sandbox Enabled  •  256-bit SSL Encryption</span>
+            <span>{isLive ? 'Official Razorpay Live Gateway  •  256-bit SSL Encryption' : 'Razorpay Test Sandbox Enabled  •  256-bit SSL Encryption'}</span>
           </div>
         </div>
       </div>
