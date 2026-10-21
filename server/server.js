@@ -243,12 +243,68 @@ app.post('/api/orders/initiate', async (req, res) => {
     const stats = await getRealtimeStats();
     broadcastRealtimeEvent('order_initiated', { order: initiatedOrder, stats });
 
-    console.log(`🟡 [MySQL] Order ${orderId} INITIATED — ₹${amountPaid} — ${customerEmail}`);
+    // Create real Razorpay Live order & payment link
+    const rzpKeyId = process.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
+    const rzpKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET || 'OqRL5KUsn0Eof6YuydfXWyMu';
+    let razorpayOrderId = orderId;
+    let paymentLinkUrl = '';
+
+    try {
+      const authHeader = 'Basic ' + Buffer.from(`${rzpKeyId}:${rzpKeySecret}`).toString('base64');
+      const rzpOrderRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({
+          amount: Math.round(Number(amountPaid) * 100),
+          currency: 'INR',
+          receipt: orderId.slice(0, 40),
+          notes: { orderId, itineraryId, destination: destination || '', customerEmail: customerEmail || '' }
+        })
+      });
+      if (rzpOrderRes.ok) {
+        const d = await rzpOrderRes.json();
+        if (d.id) razorpayOrderId = d.id;
+      }
+      const plinkRes = await fetch('https://api.razorpay.com/v1/payment_links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({
+          amount: Math.round(Number(amountPaid) * 100),
+          currency: 'INR',
+          description: `${destination || 'Travel'} Itinerary Blueprint`,
+          upi_link: true,
+          customer: {
+            name: customerName || 'Valued Traveler',
+            email: customerEmail || 'traveler@v3itinerary.com',
+            contact: customerMobile || '9820389694'
+          },
+          notify: { sms: false, email: false },
+          callback_url: `https://www.v3itinerary.com/?order_id=${orderId}&status=paid`,
+          callback_method: 'get'
+        })
+      });
+      if (plinkRes.ok) {
+        const pd = await plinkRes.json();
+        if (pd.short_url) paymentLinkUrl = pd.short_url;
+      }
+    } catch (e) {
+      console.warn('Razorpay server initiate note:', e.message);
+    }
 
     res.status(201).json({
       success: true,
       message: 'Order initiated and recorded in MySQL as INITIATED',
-      order: initiatedOrder
+      order: initiatedOrder,
+      orderId,
+      razorpayOrderId,
+      paymentLinkUrl,
+      keyId: rzpKeyId
     });
   } catch (error) {
     console.error('Error initiating order:', error);

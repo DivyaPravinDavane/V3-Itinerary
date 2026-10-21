@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, ArrowLeft, Loader2, Mail, User, Smartphone, 
   MapPin, Lock, CheckCircle2, AlertCircle, FileText, Check, CreditCard
@@ -32,6 +32,8 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
   onCancel
 }) => {
   const [paymentMode, setPaymentMode] = useState<'gpay' | 'razorpay'>('gpay');
+  const [liveRzpOrderId, setLiveRzpOrderId] = useState<string>('');
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string>('');
   const [name, setName] = useState(customerName || '');
   const [phone, setPhone] = useState((customerMobile || '').replace(/[^0-9]/g, '').slice(-10));
   const [email, setEmail] = useState(customerEmail || '');
@@ -39,6 +41,44 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId] = useState(() => `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`);
+
+  // Pre-generate live Razorpay Order & Payment Link as soon as checkout opens
+  useEffect(() => {
+    let active = true;
+    async function prepareLiveOrder() {
+      try {
+        const cleanPhone = (phone || customerMobile || '9820389694').replace(/[^0-9]/g, '') || '9820389694';
+        const effectiveAddress = address.trim() || 'Digital Delivery (India)';
+        const res = await initiateOrderInBackend({
+          orderId,
+          itineraryId: itinerary.id,
+          itineraryTitle: itinerary.title,
+          destination: itinerary.destination,
+          customerName: name.trim() || customerName || 'Valued Traveler',
+          customerEmail: email.trim() || customerEmail || 'traveler@v3itinerary.com',
+          customerMobile: cleanPhone,
+          customerAddress: effectiveAddress,
+          amountPaid: 99.00,
+          agentName: itinerary.agent?.agencyName || 'Verified Agent',
+          agentPhone: itinerary.agent?.phone || '',
+          agentEmail: itinerary.agent?.email || '',
+          agentWhatsapp: itinerary.agent?.whatsapp || ''
+        });
+
+        if (active && res) {
+          if (res.razorpayOrderId) setLiveRzpOrderId(res.razorpayOrderId);
+          if (res.paymentLinkUrl) setPaymentLinkUrl(res.paymentLinkUrl);
+        }
+      } catch (err) {
+        console.warn('Live order pre-init notice:', err);
+      }
+    }
+
+    prepareLiveOrder();
+    return () => {
+      active = false;
+    };
+  }, [orderId, itinerary.id]);
 
   // Handle direct GPay QR Scanner payment completion
   const handleGPayPaymentSuccess = async (pid: string) => {
@@ -87,7 +127,33 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
     onCancel();
   };
 
-  // Launch official Razorpay standard popup prefilled with authentic customer phone and gmail
+  // Direct redirect to Google Pay / Razorpay live hosted payment page
+  const handleRedirectToPaymentLink = async () => {
+    setErrorMessage('');
+
+    if (!name.trim()) {
+      setErrorMessage('Please enter your Full Name.');
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setErrorMessage('Please enter a valid 10-digit Mobile Phone Number.');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      setErrorMessage('Please enter a valid Gmail / Email address to deliver your itinerary.');
+      return;
+    }
+
+    if (paymentLinkUrl) {
+      window.location.href = paymentLinkUrl;
+      return;
+    }
+
+    await handleProceedToRazorpay();
+  };
+
+  // Launch official Razorpay live popup prefilled with customer phone and gmail
   const handleProceedToRazorpay = async () => {
     setErrorMessage('');
 
@@ -104,19 +170,19 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
       setErrorMessage('Please enter a valid Gmail / Email address to deliver your itinerary.');
       return;
     }
-    if (!address.trim()) {
-      setErrorMessage('Please enter your Address.');
-      return;
-    }
 
+    const effectiveAddress = address.trim() || 'Digital Delivery (India)';
     const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
 
-    if (typeof (window as any).Razorpay !== 'undefined') {
-      setIsProcessing(true);
+    setIsProcessing(true);
 
-      // 1. Immediately record INITIATED status in phpMyAdmin MySQL
+    // 1. Immediately create Live Razorpay Order and record in MySQL if not ready
+    let activeRzpOrderId = liveRzpOrderId;
+    let activePaymentLink = paymentLinkUrl;
+
+    if (!activeRzpOrderId || !activePaymentLink) {
       try {
-        await initiateOrderInBackend({
+        const initResult = await initiateOrderInBackend({
           orderId,
           itineraryId: itinerary.id,
           itineraryTitle: itinerary.title,
@@ -124,18 +190,29 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
           customerName: name.trim(),
           customerEmail: email.trim(),
           customerMobile: cleanPhone,
-          customerAddress: address.trim(),
+          customerAddress: effectiveAddress,
           amountPaid: 99.00,
           agentName: itinerary.agent?.agencyName || 'Verified Agent',
           agentPhone: itinerary.agent?.phone || '',
           agentEmail: itinerary.agent?.email || '',
           agentWhatsapp: itinerary.agent?.whatsapp || ''
         });
+
+        if (initResult && initResult.razorpayOrderId) {
+          activeRzpOrderId = initResult.razorpayOrderId;
+          setLiveRzpOrderId(initResult.razorpayOrderId);
+        }
+        if (initResult && initResult.paymentLinkUrl) {
+          activePaymentLink = initResult.paymentLinkUrl;
+          setPaymentLinkUrl(initResult.paymentLinkUrl);
+        }
       } catch (initErr) {
         console.warn('Notice: Order initiation recorded locally:', initErr);
       }
+    }
 
-      const options = {
+    if (typeof (window as any).Razorpay !== 'undefined') {
+      const options: any = {
         key: apiKey,
         amount: 9900, // ₹99.00 in paise
         currency: 'INR',
@@ -144,7 +221,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
         handler: async function (response: any) {
           setIsProcessing(false);
-          const pid = response.razorpay_payment_id || `pay_rzp_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+          const pid = response.razorpay_payment_id || `pay_live_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
           // Update MySQL status to PAID with the authentic Razorpay Payment ID
           await updateOrderStatusInBackend(orderId, 'PAID', {
@@ -153,7 +230,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
 
           onSuccess(pid, orderId, email.trim(), {
             name: name.trim(),
-            address: address.trim(),
+            address: effectiveAddress,
             phone: cleanPhone,
             email: email.trim()
           });
@@ -165,7 +242,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
           method: 'upi'
         },
         notes: {
-          address: address.trim(),
+          address: effectiveAddress,
           customerName: name.trim(),
           customerPhone: cleanPhone,
           customerEmail: email.trim(),
@@ -180,7 +257,6 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
           ondismiss: function () {
             setIsProcessing(false);
             console.log('User closed Razorpay modal without completing -> Updating status to CANCELLED in MySQL');
-            // Update MySQL status to CANCELLED
             updateOrderStatusInBackend(orderId, 'CANCELLED', {
               reason: 'Customer closed the Razorpay payment window before completing'
             });
@@ -189,12 +265,16 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         }
       };
 
+      // Attach authentic Razorpay live order_id if generated
+      if (activeRzpOrderId && activeRzpOrderId.startsWith('order_')) {
+        options.order_id = activeRzpOrderId;
+      }
+
       try {
         const rzp = new (window as any).Razorpay(options);
         rzp.on('payment.failed', function (response: any) {
           console.warn('Razorpay payment response:', response.error);
           setIsProcessing(false);
-          // Update MySQL status to FAILED
           updateOrderStatusInBackend(orderId, 'FAILED', {
             reason: response.error?.description || 'Bank transaction declined'
           });
@@ -203,14 +283,20 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         rzp.open();
         return;
       } catch (err: any) {
-        console.warn('Could not launch Razorpay popup:', err);
+        console.warn('Could not launch Razorpay popup directly, checking payment link:', err);
         setIsProcessing(false);
-        updateOrderStatusInBackend(orderId, 'FAILED', {
-          reason: err?.message || 'Gateway launch failure'
-        });
+        if (activePaymentLink) {
+          window.location.href = activePaymentLink;
+          return;
+        }
         setErrorMessage(err?.message || 'Unable to open Razorpay gateway. Please try again.');
       }
     } else {
+      setIsProcessing(false);
+      if (activePaymentLink) {
+        window.location.href = activePaymentLink;
+        return;
+      }
       setErrorMessage('Razorpay payment gateway is loading. Please refresh and try again.');
     }
   };
@@ -427,6 +513,9 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
                   destination={itinerary.destination}
                   itineraryTitle={itinerary.title}
                   onPaymentComplete={handleGPayPaymentSuccess}
+                  onOpenRazorpayLive={handleProceedToRazorpay}
+                  onRedirectPayment={handleRedirectToPaymentLink}
+                  paymentLinkUrl={paymentLinkUrl}
                 />
               </div>
             )}
