@@ -109,7 +109,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
       return;
     }
 
-    const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_Tedd2fb7VdKGOl';
+    const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
 
     if (typeof (window as any).Razorpay !== 'undefined') {
       setIsProcessing(true);

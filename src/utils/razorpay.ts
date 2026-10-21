@@ -15,7 +15,7 @@ export interface RazorpayPaymentParams {
  * Checks whether a real, custom Razorpay test key is configured in .env
  */
 export const hasCustomRazorpayKey = (): boolean => {
-  const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  const key = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
   return Boolean(
     key && 
     typeof key === 'string' && 
@@ -31,7 +31,7 @@ export const hasCustomRazorpayKey = (): boolean => {
  * Checks whether Razorpay is configured with a real LIVE merchant key (rzp_live_...)
  */
 export const isRazorpayLiveMode = (): boolean => {
-  const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  const key = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
   return Boolean(
     key && 
     typeof key === 'string' && 
@@ -70,7 +70,7 @@ export const openRazorpayCheckout = ({
     }
   }
 
-  const apiKey = (configuredKey && configuredKey.trim()) || 'rzp_test_1DP5mmOlF5G5ag';
+  const apiKey = (configuredKey && configuredKey.trim()) || 'rzp_live_Tq8dvK47AREHHK';
 
   if (typeof (window as any).Razorpay !== 'undefined') {
     const options = {

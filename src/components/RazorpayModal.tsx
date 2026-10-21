@@ -28,7 +28,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
   // Read Razorpay API key from .env / Vercel
   const isCustomKey = hasCustomRazorpayKey();
   const isLive = isRazorpayLiveMode();
-  const apiKey = (import.meta.env.VITE_RAZORPAY_KEY_ID || '').trim();
+  const apiKey = (import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK').trim();
   const [sdkReady, setSdkReady] = useState(false);
 
   // Check if Razorpay SDK is loaded
