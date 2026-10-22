@@ -1,6 +1,17 @@
 import crypto from 'crypto';
 import { getPool, setCorsHeaders, parseRequestBody, ensureSchema } from './_db.js';
 
+function getLiveRazorpayKeys() {
+  const envKey = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "").trim();
+  const envSecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+  
+  // Strictly enforce live keys: If env key is test mode (starts with rzp_test_), override with live key
+  const keyId = (envKey && envKey.startsWith("rzp_live_")) ? envKey : "rzp_live_Tq8dvK47AREHHK";
+  const keySecret = (envSecret && !envKey.startsWith("rzp_test_") && envSecret.length > 5) ? envSecret : "OqRL5KUsn0Eof6YuydfXWyMu";
+
+  return { keyId, keySecret };
+}
+
 export default async function handler(req, res) {
   setCorsHeaders(res);
   if (req.method === 'OPTIONS') {
@@ -57,13 +68,11 @@ export default async function handler(req, res) {
     }
   }
 
-  
   // 1b. POST /api/orders/create-razorpay-order (Razorpay API v1/orders)
   if (req.method === "POST" && isCreateRazorpayOrder) {
     try {
       const { amount = 99, receipt, notes = {} } = parsedBody;
-      const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
-      const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+      const { keyId, keySecret } = getLiveRazorpayKeys();
 
       if (!keyId || !keySecret || keyId === "your_razorpay_key_id_here") {
         return res.status(400).json({ error: "Razorpay keys not configured on server", fallback: true });
@@ -119,8 +128,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
-      const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "OqRL5KUsn0Eof6YuydfXWyMu").trim();
+      const { keyId, keySecret } = getLiveRazorpayKeys();
 
       // 1. If HMAC signature is provided, verify SHA256 signature
       let signatureValid = false;
@@ -282,8 +290,7 @@ export default async function handler(req, res) {
       }
 
       // Create live Razorpay Order & Payment Link for seamless Google Pay & Razorpay Checkout
-      const rzpKeyId = process.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
-      const rzpKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET || 'OqRL5KUsn0Eof6YuydfXWyMu';
+      const { keyId: rzpKeyId, keySecret: rzpKeySecret } = getLiveRazorpayKeys();
       let razorpayOrderId = orderId;
       let paymentLinkUrl = '';
 

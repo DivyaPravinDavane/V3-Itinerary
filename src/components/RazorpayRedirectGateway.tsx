@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { Itinerary } from '../types';
 import { initiateOrderInBackend, updateOrderStatusInBackend, verifyRazorpayPayment } from '../utils/api';
+import { getRazorpayKeyId } from '../utils/razorpay';
 
 export interface CustomerDetails {
   name: string;
@@ -68,7 +69,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
       return;
     }
 
-    const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
+    const apiKey = getRazorpayKeyId();
 
     if (typeof (window as any).Razorpay !== 'undefined') {
       setIsProcessing(true);

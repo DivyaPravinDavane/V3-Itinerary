@@ -98,7 +98,12 @@ export const openRazorpayCheckout = async ({
       orderRef: generatedOrderId
     });
     if (orderRes?.order?.id) {
-      serverOrderId = orderRes.order.id;
+      // Strict guard: ONLY pass order_id if it was generated under the LIVE key
+      if (!orderRes.keyId || orderRes.keyId === apiKey || orderRes.keyId.startsWith("rzp_live_")) {
+        serverOrderId = orderRes.order.id;
+      } else {
+        console.warn("Skipping mismatched order from server with key:", orderRes.keyId);
+      }
     }
   } catch (orderErr) {
     console.warn("Backend order creation notice:", orderErr);
@@ -186,30 +191,6 @@ export const openRazorpayCheckout = async ({
     },
     theme: {
       color: "#0F2C59"
-    },
-    config: {
-      display: {
-        blocks: {
-          upi: {
-            name: "Pay via Google Pay / UPI",
-            instruments: [
-              { method: "upi" }
-            ]
-          },
-          other: {
-            name: "Cards & NetBanking",
-            instruments: [
-              { method: "card" },
-              { method: "netbanking" },
-              { method: "wallet" }
-            ]
-          }
-        },
-        sequence: ["block.upi", "block.other"],
-        preferences: {
-          show_default_blocks: true
-        }
-      }
     },
     modal: {
       ondismiss: function () {

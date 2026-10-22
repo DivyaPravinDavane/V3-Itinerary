@@ -50,6 +50,17 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+function getLiveRazorpayKeys() {
+  const envKey = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "").trim();
+  const envSecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+  
+  // Strictly enforce live keys: If env key is test mode (starts with rzp_test_), override with live key
+  const keyId = (envKey && envKey.startsWith("rzp_live_")) ? envKey : "rzp_live_Tq8dvK47AREHHK";
+  const keySecret = (envSecret && !envKey.startsWith("rzp_test_") && envSecret.length > 5) ? envSecret : "OqRL5KUsn0Eof6YuydfXWyMu";
+
+  return { keyId, keySecret };
+}
+
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -245,8 +256,7 @@ app.post('/api/orders/initiate', async (req, res) => {
     broadcastRealtimeEvent('order_initiated', { order: initiatedOrder, stats });
 
     // Create real Razorpay Live order & payment link
-    const rzpKeyId = process.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
-    const rzpKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET || 'OqRL5KUsn0Eof6YuydfXWyMu';
+    const { keyId: rzpKeyId, keySecret: rzpKeySecret } = getLiveRazorpayKeys();
     let razorpayOrderId = orderId;
     let paymentLinkUrl = '';
 
@@ -319,8 +329,7 @@ app.post('/api/orders/initiate', async (req, res) => {
 app.post("/api/orders/create-razorpay-order", async (req, res) => {
   try {
     const { amount = 99, receipt, notes = {} } = req.body;
-    const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
-    const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "OqRL5KUsn0Eof6YuydfXWyMu").trim();
+    const { keyId, keySecret } = getLiveRazorpayKeys();
 
     if (!keyId || !keySecret || keyId === "your_razorpay_key_id_here") {
       return res.status(400).json({ 
@@ -381,8 +390,7 @@ app.post("/api/orders/verify-payment", async (req, res) => {
       });
     }
 
-    const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
-    const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "OqRL5KUsn0Eof6YuydfXWyMu").trim();
+    const { keyId, keySecret } = getLiveRazorpayKeys();
 
     // 1. If HMAC signature is provided, verify SHA256 signature
     let signatureValid = false;
