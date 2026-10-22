@@ -1,123 +1,178 @@
+import type { Itinerary } from "../types";
+import { initiateOrderInBackend, updateOrderStatusInBackend, createRazorpayOrder } from "./api";
+
 export interface RazorpayPaymentParams {
-  itineraryTitle: string;
-  destination: string;
+  itinerary: Itinerary;
   amount?: number; // in INR, defaults to 99
   customerName?: string;
   customerEmail?: string;
   customerMobile?: string;
-  onSuccess: (paymentId: string, orderId: string) => void;
-  onFallbackToModal?: () => void;
+  onSuccess: (paymentId: string, orderId: string, verifiedCustomer?: { name: string; email: string; phone: string }) => void;
   onFailure?: (error: any) => void;
   onDismiss?: () => void;
 }
 
 /**
- * Checks whether a real, custom Razorpay test key is configured in .env
+ * Checks whether a real, active Razorpay API key (test or live) is configured
  */
 export const hasCustomRazorpayKey = (): boolean => {
-  const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  const key = (import.meta.env.VITE_RAZORPAY_KEY_ID || "").trim();
   return Boolean(
     key && 
-    typeof key === 'string' && 
-    key.trim().length > 10 && 
-    key.startsWith('rzp_test_') && 
-    key !== 'rzp_test_1DP5mmOlF5G5ag' &&
-    key !== 'your_razorpay_key_id_here'
+    typeof key === "string" && 
+    key.length > 10 && 
+    (key.startsWith("rzp_live_") || key.startsWith("rzp_test_")) && 
+    key !== "rzp_live_Tq8dvK47AREHHK" &&
+    key !== "your_razorpay_key_id_here"
   );
 };
 
+export const getRazorpayKeyId = (): string => {
+  const key = (import.meta.env.VITE_RAZORPAY_KEY_ID || "").trim();
+  return key || "rzp_live_Tq8dvK47AREHHK";
+};
+
 /**
- * Opens the official Razorpay Checkout popup if a valid key is in .env,
- * otherwise falls back cleanly to the built-in verified gateway to avoid "No appropriate payment method found" errors.
+ * Opens official Razorpay Standard Checkout popup directly (Google Pay, UPI, Cards, NetBanking)
  */
-export const openRazorpayCheckout = ({
-  destination,
+export const openRazorpayCheckout = async ({
+  itinerary,
   amount = 99,
-  customerName = 'Valued Traveler',
-  customerEmail = 'traveler@v3itinerary.com',
-  customerMobile = '9820389694',
+  customerName = "Valued Traveler",
+  customerEmail = "",
+  customerMobile = "",
   onSuccess,
-  onFallbackToModal,
   onFailure,
   onDismiss
 }: RazorpayPaymentParams) => {
-  const configuredKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-  const isCustomKey = hasCustomRazorpayKey();
-  const generatedOrderId = `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const apiKey = getRazorpayKeyId();
+  const generatedOrderId = `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const cleanPhone = (customerMobile || "").replace(/[^0-9]/g, "").slice(-10);
+  const cleanName = (customerName || "").trim() || "Valued Traveler";
+  const cleanEmail = (customerEmail || "").trim();
 
-  // Clean 10-digit Indian phone number for Razorpay prefill
-  const cleanPhone = (customerMobile || '9820389694').replace(/[^0-9]/g, '').slice(-10) || '9820389694';
+  // 1. Immediately log INITIATED in MySQL
+  try {
+    await initiateOrderInBackend({
+      orderId: generatedOrderId,
+      itineraryId: itinerary.id,
+      itineraryTitle: itinerary.title,
+      destination: itinerary.destination,
+      customerName: cleanName,
+      customerEmail: cleanEmail,
+      customerMobile: cleanPhone,
+      customerAddress: "",
+      amountPaid: amount,
+      agentName: itinerary.agent?.agencyName || "Verified Agent",
+      agentPhone: itinerary.agent?.phone || "",
+      agentEmail: itinerary.agent?.email || "",
+      agentWhatsapp: itinerary.agent?.whatsapp || ""
+    });
+  } catch (initErr) {
+    console.warn("Initiated order notice:", initErr);
+  }
 
-  // If user has not yet configured a real active test key, immediately route to the in-app verified gateway
-  // to avoid the Razorpay "No appropriate payment method found" error
-  if (!isCustomKey) {
-    if (onFallbackToModal) {
-      onFallbackToModal();
+  // 2. Request official server-side Razorpay Order ID (required for live UPI / Google Pay auto-capture)
+  let serverOrderId = "";
+  try {
+    const orderRes = await createRazorpayOrder(amount, generatedOrderId, {
+      destination: itinerary.destination,
+      itineraryId: itinerary.id,
+      orderRef: generatedOrderId
+    });
+    if (orderRes?.order?.id) {
+      serverOrderId = orderRes.order.id;
+    }
+  } catch (orderErr) {
+    console.warn("Backend order creation notice:", orderErr);
+  }
+
+  // 3. Ensure Razorpay checkout script is ready
+  if (typeof (window as any).Razorpay === "undefined") {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load Razorpay SDK"));
+        document.body.appendChild(script);
+      });
+    } catch (sdkErr) {
+      console.error(sdkErr);
+      if (onFailure) onFailure(sdkErr);
       return;
     }
   }
 
-  const apiKey = (configuredKey && configuredKey.trim()) || 'rzp_test_1DP5mmOlF5G5ag';
+  const options: any = {
+    key: apiKey,
+    amount: Math.round(amount * 100), // in paise (9900 = ₹99.00)
+    currency: "INR",
+    name: "V3Itinerary Platforms India Pvt Ltd",
+    description: `${itinerary.destination} Complete Travel Itinerary`,
+    image: "https://v3itinerary.com/favicon.png",
+    handler: async function (response: any) {
+      const pid = response.razorpay_payment_id || `pay_rzp_${Date.now()}`;
 
-  if (typeof (window as any).Razorpay !== 'undefined') {
-    const options = {
-      key: apiKey,
-      amount: Math.round(amount * 100), // In paise (9900 paise = ₹99.00)
-      currency: 'INR',
-      name: 'V3Itinerary',
-      description: `${destination} Verified Travel Itinerary`,
-      image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
-      handler: function (response: any) {
-        const pid = response.razorpay_payment_id || `pay_test_${Date.now()}`;
-        onSuccess(pid, generatedOrderId);
-      },
-      prefill: {
-        name: customerName,
-        email: customerEmail,
-        contact: cleanPhone
-      },
-      notes: {
-        destination: destination,
-        orderId: generatedOrderId,
-        accessTier: 'Flat ₹99 Complete Itinerary Access'
-      },
-      theme: {
-        color: '#0F2C59'
-      },
-      modal: {
-        ondismiss: function () {
-          if (onDismiss) onDismiss();
-        }
+      // Update status to PAID in MySQL
+      try {
+        await updateOrderStatusInBackend(generatedOrderId, "PAID", {
+          razorpayPaymentId: pid
+        });
+      } catch (e) {
+        console.warn("MySQL update notice:", e);
       }
-    };
 
-    try {
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        console.warn('Razorpay payment failed or no methods available:', response.error);
-        if (onFallbackToModal) {
-          onFallbackToModal();
-        } else if (onFailure) {
-          onFailure(response.error);
-        }
+      onSuccess(pid, generatedOrderId, {
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone
       });
-      rzp.open();
-    } catch (err) {
-      console.warn('Could not launch Razorpay popup, falling back to gateway modal:', err);
-      if (onFallbackToModal) {
-        onFallbackToModal();
-      } else {
-        const fallbackId = `pay_test_${Date.now()}`;
-        onSuccess(fallbackId, generatedOrderId);
+    },
+    prefill: {
+      name: cleanName !== "Valued Traveler" ? cleanName : "",
+      email: cleanEmail,
+      contact: cleanPhone
+    },
+    notes: {
+      orderId: generatedOrderId,
+      itineraryId: itinerary.id,
+      destination: itinerary.destination,
+      packageTitle: itinerary.title
+    },
+    theme: {
+      color: "#0F2C59"
+    },
+    modal: {
+      ondismiss: function () {
+        updateOrderStatusInBackend(generatedOrderId, "CANCELLED", {
+          reason: "User closed Razorpay modal"
+        });
+        if (onDismiss) onDismiss();
       }
     }
-  } else {
-    // SDK not loaded
-    if (onFallbackToModal) {
-      onFallbackToModal();
-    } else {
-      const fallbackId = `pay_test_${Date.now()}`;
-      onSuccess(fallbackId, generatedOrderId);
-    }
+  };
+
+  if (serverOrderId) {
+    options.order_id = serverOrderId;
+  }
+
+  try {
+    const rzp = new (window as any).Razorpay(options);
+    rzp.on("payment.failed", function (response: any) {
+      console.warn("Razorpay payment failed:", response.error);
+      updateOrderStatusInBackend(generatedOrderId, "FAILED", {
+        reason: response.error?.description || "Payment failed or declined"
+      });
+      if (onFailure) onFailure(response.error);
+    });
+    rzp.open();
+  } catch (err: any) {
+    console.error("Could not launch Razorpay popup:", err);
+    updateOrderStatusInBackend(generatedOrderId, "FAILED", {
+      reason: err?.message || "Gateway launch failure"
+    });
+    if (onFailure) onFailure(err);
   }
 };

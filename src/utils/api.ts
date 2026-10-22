@@ -1107,3 +1107,24 @@ export async function fetchAgentProfile(emailOrGst: string) {
   return null;
 }
 
+
+
+/**
+ * Create official Razorpay Order on backend (for UPI/GPay & live transactions)
+ */
+export async function createRazorpayOrder(amount: number = 99, receipt?: string, notes?: any) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/create-razorpay-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, receipt, notes: notes || {} })
+    });
+    const contentType = response.headers.get("content-type") || "";
+    if (response.ok && contentType.includes("application/json")) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.warn("Notice: Backend order creation unavailable, using direct client checkout:", err);
+  }
+  return null;
+}

@@ -37,7 +37,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
   const [copied, setCopied] = useState(false);
 
-  const hasPurchased = isPurchased || Boolean(order) || (itinerary.accessPrice ?? 99) === 0;
+  const hasPurchased = Boolean(isPurchased || order);
 
   // Scroll to top on mount
   useEffect(() => {

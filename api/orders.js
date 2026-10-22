@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   const isInitiate = action === 'initiate' || cleanUrl.endsWith('/initiate');
   const isUpdateStatus = action === 'update-status' || cleanUrl.endsWith('/update-status');
   const isPayments = action === 'payments' || cleanUrl.endsWith('/payments');
+  const isCreateRazorpayOrder = action === 'create-razorpay-order' || cleanUrl.endsWith('/create-razorpay-order');
 
   // 1. GET ORDERS / PAYMENTS
   if (req.method === 'GET') {
@@ -51,6 +52,52 @@ export default async function handler(req, res) {
     } catch (err) {
       console.error('Error fetching orders:', err);
       return res.status(500).json({ error: 'Failed to fetch orders', details: err.message });
+    }
+  }
+
+  
+  // 1b. POST /api/orders/create-razorpay-order (Razorpay API v1/orders)
+  if (req.method === "POST" && isCreateRazorpayOrder) {
+    try {
+      const { amount = 99, receipt, notes = {} } = parsedBody;
+      const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
+      const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+
+      if (!keyId || !keySecret || keyId === "your_razorpay_key_id_here") {
+        return res.status(400).json({ error: "Razorpay keys not configured on server", fallback: true });
+      }
+
+      const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+      const rzpResponse = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${auth}`
+        },
+        body: JSON.stringify({
+          amount: Math.round(Number(amount) * 100),
+          currency: "INR",
+          receipt: receipt || `rcpt_${Date.now()}`,
+          notes: typeof notes === "object" ? notes : {}
+        })
+      });
+
+      const data = await rzpResponse.json();
+      if (!rzpResponse.ok) {
+        return res.status(rzpResponse.status).json({
+          error: data.error?.description || "Failed to create Razorpay order",
+          details: data
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        order: data,
+        keyId
+      });
+    } catch (err) {
+      console.error("Error creating Razorpay order:", err);
+      return res.status(500).json({ error: "Failed to create Razorpay order", details: err.message });
     }
   }
 

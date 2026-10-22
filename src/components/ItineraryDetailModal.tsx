@@ -36,7 +36,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
 
   if (!itinerary) return null;
 
-  const hasPurchased = isPurchased || Boolean(order) || (itinerary.accessPrice ?? 99) === 0;
+  const hasPurchased = Boolean(isPurchased || order);
 
   const handleDownloadPDF = () => {
     if (itinerary?.pdfUrl) {

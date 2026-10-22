@@ -18,7 +18,7 @@ import { DestinationsPage } from './components/DestinationsPage';
 import { LegalPoliciesPage } from './components/LegalPoliciesPage';
 import { type PolicyTabKey } from './data/legalPoliciesData';
 import { ItineraryDetailModal } from './components/ItineraryDetailModal';
-import { RazorpayRedirectGateway } from './components/RazorpayRedirectGateway';
+import { openRazorpayCheckout } from './utils/razorpay';
 import { POPULAR_DESTINATIONS as FALLBACK_POPULAR_DESTINATIONS, ALL_ITINERARIES as FALLBACK_ALL_ITINERARIES } from './data/mockData';
 import { checkDestinationMatchesQuery } from './utils/destinationCities';
 import { 
@@ -542,16 +542,32 @@ export function App() {
       setSelectedItinerary(itinerary);
       return;
     }
-    // If free (₹0 price), unlock directly without Razorpay!
-    if ((itinerary.accessPrice ?? 99) === 0) {
-      showToast('🎉 Free Itinerary Unlocked!');
-      setSelectedItinerary(itinerary);
+
+    // Direct checkout: If user already has email, launch official Razorpay standard popup directly!
+    if (user.isLoggedIn && user.email && user.email.includes('@')) {
+      openRazorpayCheckout({
+        itinerary,
+        amount: 99.00,
+        customerName: user.fullName || 'Valued Traveler',
+        customerEmail: user.email,
+        customerMobile: user.mobile || '',
+        onSuccess: (paymentId, orderId, verifiedCustomer) => {
+          handlePaymentSuccess(paymentId, orderId, itinerary, verifiedCustomer?.email || user.email, {
+            name: verifiedCustomer?.name || user.fullName || 'Valued Traveler',
+            phone: verifiedCustomer?.phone || user.mobile || '',
+            email: verifiedCustomer?.email || user.email,
+            address: ''
+          });
+        },
+        onFailure: (err) => {
+          showToast(`Payment failed: ${err?.description || err?.message || 'Please try again'}`);
+        }
+      });
       return;
     }
-    // Close detail modal and open full Razorpay checkout gateway cleanly
-    setSelectedItinerary(null);
-    setGatewayItinerary(itinerary);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Guest traveler: Show sleek direct checkout modal to enter Name & Gmail for PDF delivery, then launch Razorpay
+    setCheckoutItinerary(itinerary);
   };
 
   const handlePaymentSuccess = (
@@ -732,23 +748,8 @@ export function App() {
         isAgentPageOpen={agentModalOpen}
       />
 
-      {/* Main Page Body — replaced by gateway, destination packages page, or dedicated Destinations page */}
-      {gatewayItinerary ? (
-        <RazorpayRedirectGateway 
-          itinerary={gatewayItinerary}
-          customerName={user.fullName}
-          customerEmail={user.email}
-          customerMobile={user.mobile}
-          onSuccess={(paymentId, orderId, verifiedEmail, customerDetails) => {
-            handlePaymentSuccess(paymentId, orderId, gatewayItinerary, verifiedEmail, customerDetails);
-          }}
-          onCancel={() => {
-            const it = gatewayItinerary;
-            setGatewayItinerary(null);
-            setSelectedItinerary(it);
-          }}
-        />
-      ) : selectedDestinationName ? (
+      {/* Main Page Body — destination packages page, dedicated Destinations page, or Home */}
+      {selectedDestinationName ? (
         <DestinationPackagesModal 
           destinationName={selectedDestinationName}
           allItineraries={allItineraries}
@@ -939,12 +940,21 @@ export function App() {
         />
       )}
 
-      {/* MODAL 2: Fallback In-App Modal */}
+      {/* MODAL 2: Official Razorpay Direct Checkout (Prompts Name & Gmail for guest PDF dispatch) */}
       {checkoutItinerary && (
         <RazorpayModal 
           itinerary={checkoutItinerary}
           onClose={() => setCheckoutItinerary(null)}
-          onSuccess={handlePaymentSuccess}
+          onSuccess={(paymentId, orderId, verifiedCustomer) => {
+            const it = checkoutItinerary;
+            setCheckoutItinerary(null);
+            handlePaymentSuccess(paymentId, orderId, it, verifiedCustomer?.email, {
+              name: verifiedCustomer?.name || 'Valued Traveler',
+              phone: verifiedCustomer?.phone || '',
+              email: verifiedCustomer?.email || '',
+              address: ''
+            });
+          }}
           customerName={user.fullName}
           customerEmail={user.email}
           customerMobile={user.mobile}

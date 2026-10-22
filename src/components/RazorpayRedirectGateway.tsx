@@ -68,7 +68,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
       return;
     }
 
-    const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_Tedd2fb7VdKGOl';
+    const apiKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
 
     if (typeof (window as any).Razorpay !== 'undefined') {
       setIsProcessing(true);
@@ -100,7 +100,7 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         currency: 'INR',
         name: 'V3Itinerary',
         description: `${itinerary.destination} Travel Itinerary`,
-        image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
+        image: 'https://v3itinerary.com/favicon.png',
         handler: async function (response: any) {
           setIsProcessing(false);
           const pid = response.razorpay_payment_id || `pay_rzp_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;

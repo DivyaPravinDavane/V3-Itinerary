@@ -257,6 +257,57 @@ app.post('/api/orders/initiate', async (req, res) => {
 });
 
 // ─── 5b. Update Order Status (CANCELLED, FAILED, PAID) ────────────────────────
+
+// ─── 5c. Create Official Razorpay Order (API v1/orders for live UPI/GPay) ──────
+app.post("/api/orders/create-razorpay-order", async (req, res) => {
+  try {
+    const { amount = 99, receipt, notes = {} } = req.body;
+    const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
+    const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+
+    if (!keyId || !keySecret || keyId === "your_razorpay_key_id_here") {
+      return res.status(400).json({ 
+        error: "Razorpay credentials not fully configured on server",
+        fallback: true 
+      });
+    }
+
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    const rzpResponse = await fetch("https://api.razorpay.com/v1/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${auth}`
+      },
+      body: JSON.stringify({
+        amount: Math.round(Number(amount) * 100), // In paise (9900 paise = ₹99.00)
+        currency: "INR",
+        receipt: receipt || `rcpt_${Date.now()}`,
+        notes: typeof notes === "object" ? notes : {}
+      })
+    });
+
+    const data = await rzpResponse.json();
+    if (!rzpResponse.ok) {
+      console.warn("⚠️ Razorpay API order warning:", data);
+      return res.status(rzpResponse.status).json({ 
+        error: data.error?.description || "Failed to create Razorpay order", 
+        data 
+      });
+    }
+
+    console.log(`💳 [Razorpay] Created official order ${data.id} for ₹${amount}`);
+    res.json({
+      success: true,
+      order: data,
+      keyId
+    });
+  } catch (error) {
+    console.error("Error creating Razorpay order:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/orders/update-status', async (req, res) => {
   try {
     const { orderId, status, razorpayPaymentId, reason } = req.body;

@@ -1,291 +1,250 @@
-import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CreditCard, Smartphone, Building, Check, Loader2, CheckCircle2 } from 'lucide-react';
-import type { Itinerary } from '../types';
-import { hasCustomRazorpayKey } from '../utils/razorpay';
+import React, { useState } from "react";
+import { X, ShieldCheck, Mail, User, Smartphone, Lock, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
+import type { Itinerary } from "../types";
+import { openRazorpayCheckout } from "../utils/razorpay";
 
 interface RazorpayModalProps {
   itinerary: Itinerary | null;
   onClose: () => void;
-  onSuccess: (paymentId: string, orderId: string) => void;
-  customerName: string;
-  customerEmail: string;
-  customerMobile: string;
+  onSuccess: (paymentId: string, orderId: string, verifiedCustomer?: { name: string; email: string; phone: string }) => void;
+  customerName?: string;
+  customerEmail?: string;
+  customerMobile?: string;
 }
 
 export const RazorpayModal: React.FC<RazorpayModalProps> = ({
   itinerary,
   onClose,
   onSuccess,
-  customerName,
-  customerEmail,
-  customerMobile
+  customerName = "",
+  customerEmail = "",
+  customerMobile = ""
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
-  const [upiVpa, setUpiVpa] = useState('traveller@okaxis');
+  const [name, setName] = useState(customerName || "");
+  const [phone, setPhone] = useState((customerMobile || "").replace(/[^0-9]/g, "").slice(-10));
+  const [email, setEmail] = useState(customerEmail || "");
+  const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState<string>('');
-  
-  // Read real Razorpay test API key from .env file
-  const isCustomKey = hasCustomRazorpayKey();
-  const apiKey = (import.meta.env.VITE_RAZORPAY_KEY_ID || '').trim();
-  const [sdkReady, setSdkReady] = useState(false);
-
-  // Check if Razorpay SDK is loaded
-  useEffect(() => {
-    if (typeof (window as any).Razorpay !== 'undefined') {
-      setSdkReady(true);
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => setSdkReady(true);
-      document.body.appendChild(script);
-    }
-  }, []);
 
   if (!itinerary) return null;
 
-  // Order calculation - Flat ₹99
-  const totalPayable = 99.00;
-  const generatedOrderId = `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
 
-  // Simulates test payment authorization cleanly and reliably
-  const handleSimulatePayment = () => {
-    setIsProcessing(true);
-    setProcessingStep('Authorizing ₹99 payment with bank...');
-    setTimeout(() => {
-      setProcessingStep('Verifying with Razorpay Gateway...');
-      setTimeout(() => {
-        setIsProcessing(false);
-        const fakePaymentId = `pay_rzp_${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
-        onSuccess(fakePaymentId, generatedOrderId);
-      }, 600);
-    }, 600);
-  };
-
-  // Launch official Razorpay standard popup if real key is configured
-  const handleOpenOfficialRazorpay = () => {
-    if (!isCustomKey || !apiKey) {
-      handleSimulatePayment();
+    if (!name.trim()) {
+      setErrorMessage("Please enter your Full Name.");
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setErrorMessage("Please enter a valid 10-digit Mobile Phone Number.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMessage("Please enter a valid Gmail / Email address to deliver your PDF itinerary.");
       return;
     }
 
     setIsProcessing(true);
-    setProcessingStep('Connecting to Razorpay gateway...');
-    try {
-      if (typeof (window as any).Razorpay !== 'undefined') {
-        const options = {
-          key: apiKey,
-          amount: Math.round(totalPayable * 100), // In paise (9900 paise = ₹99.00)
-          currency: 'INR',
-          name: 'V3 Itinerary',
-          description: `${itinerary.destination} Verified Travel Itinerary`,
-          image: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
-          handler: function (response: any) {
-            setIsProcessing(false);
-            const pid = response.razorpay_payment_id || `pay_rzp_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-            onSuccess(pid, generatedOrderId);
-          },
-          prefill: {
-            name: customerName,
-            email: customerEmail,
-            contact: customerMobile || '9820389694'
-          },
-          theme: {
-            color: '#0F2C59'
-          },
-          modal: {
-            ondismiss: function () {
-              setIsProcessing(false);
-            }
-          }
-        };
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (resp: any) {
-          console.warn('Razorpay popup error:', resp);
-          // Auto fallback to test sandbox approval so the user is never blocked
-          handleSimulatePayment();
-        });
-        rzp.open();
-      } else {
-        handleSimulatePayment();
-      }
-    } catch (err) {
-      console.warn('Razorpay popup blocked or failed, executing test payment:', err);
-      handleSimulatePayment();
+    try {
+      await openRazorpayCheckout({
+        itinerary,
+        amount: 99.00,
+        customerName: name.trim(),
+        customerEmail: email.trim(),
+        customerMobile: cleanPhone,
+        onSuccess: (pid, oid, customer) => {
+          setIsProcessing(false);
+          onClose();
+          onSuccess(pid, oid, customer || { name: name.trim(), email: email.trim(), phone: cleanPhone });
+        },
+        onDismiss: () => {
+          setIsProcessing(false);
+        },
+        onFailure: (err) => {
+          setIsProcessing(false);
+          setErrorMessage(err?.description || err?.message || "Payment could not be completed. Please try again.");
+        }
+      });
+    } catch (err: any) {
+      setIsProcessing(false);
+      setErrorMessage(err?.message || "Unable to launch Razorpay gateway. Please try again.");
     }
   };
 
   return (
-    <div className="modal-overlay animate-fade-in" onClick={onClose}>
-      <div className="modal-container razorpay-checkout-box shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
-        {/* Razorpay Brand Header */}
-        <div className="razorpay-header">
-          <div className="rzp-brand-row">
-            <div className="rzp-logo-badge">
-              <span className="rzp-logo-text">Razorpay</span>
-              <span className="rzp-verified-badge">{sdkReady ? 'Official SDK Connected' : 'Verified Merchant'}</span>
+    <div className="modal-overlay animate-fade-in" onClick={onClose} style={{ zIndex: 1050 }}>
+      <div 
+        className="modal-container shadow-2xl animate-scale-up" 
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "460px",
+          width: "92%",
+          background: "#0c1b33",
+          borderRadius: "20px",
+          border: "1px solid rgba(56, 189, 248, 0.25)",
+          overflow: "hidden",
+          color: "#ffffff"
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          background: "linear-gradient(135deg, #09172c 0%, #102a4e 100%)",
+          padding: "20px 24px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          position: "relative"
+        }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span style={{
+                background: "#0284c7",
+                color: "#ffffff",
+                fontWeight: 800,
+                fontSize: "12px",
+                padding: "3px 8px",
+                borderRadius: "6px",
+                letterSpacing: "0.5px"
+              }}>
+                RAZORPAY
+              </span>
+              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 size={13} /> Official Checkout
+              </span>
             </div>
-            <button className="rzp-close-btn" onClick={onClose} aria-label="Cancel payment">
+            <button 
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors p-1"
+              aria-label="Close"
+            >
               <X size={18} />
             </button>
           </div>
 
-          <div className="rzp-merchant-info mt-2">
-            <h3 className="rzp-merchant-name">V3Itinerary Platforms India Pvt Ltd</h3>
-            <p className="rzp-order-ref">Order #{generatedOrderId} • Billed to: {customerName} ({customerMobile || customerEmail})</p>
-          </div>
+          <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <span>Unlock Itinerary Blueprint</span>
+            <Sparkles size={16} className="text-amber-400" />
+          </h3>
+          <p className="text-xs text-slate-300 mt-1">
+            Enter your contact details to deliver your PDF guide & proceed to secure Google Pay / Razorpay checkout.
+          </p>
+        </div>
 
-          <div className="rzp-amount-callout">
-            <span className="rzp-curr">₹</span>
-            <span className="rzp-amount-num">{totalPayable.toFixed(2)}</span>
-            <span className="rzp-tax-breakdown-btn" title="Flat Price • All Taxes Included">
-              (Flat Price • Taxes Included)
-            </span>
+        {/* Selected Package Summary */}
+        <div style={{
+          padding: "14px 20px",
+          background: "rgba(15, 39, 74, 0.6)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.06)"
+        }}>
+          <div className="flex items-center justify-between">
+            <div className="pr-3">
+              <span className="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Selected Itinerary</span>
+              <div className="text-sm font-semibold text-slate-100 line-clamp-1">{itinerary.title}</div>
+              <div className="text-xs text-slate-400">{itinerary.destination} • {itinerary.durationDays}D/{itinerary.durationNights}N Complete Plan</div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-xs text-slate-400 line-through">₹499</div>
+              <div className="text-xl font-extrabold text-emerald-400">₹99.00</div>
+              <div className="text-[10px] text-emerald-300">All Taxes Incl.</div>
+            </div>
           </div>
         </div>
 
-        {/* Payment Methods Tabs */}
-        <div className="rzp-methods-strip">
-          <button 
-            className={`rzp-method-tab ${selectedMethod === 'upi' ? 'active' : ''}`}
-            onClick={() => setSelectedMethod('upi')}
-          >
-            <Smartphone size={16} /> UPI / QR
-          </button>
-          <button 
-            className={`rzp-method-tab ${selectedMethod === 'card' ? 'active' : ''}`}
-            onClick={() => setSelectedMethod('card')}
-          >
-            <CreditCard size={16} /> Cards
-          </button>
-          <button 
-            className={`rzp-method-tab ${selectedMethod === 'netbanking' ? 'active' : ''}`}
-            onClick={() => setSelectedMethod('netbanking')}
-          >
-            <Building size={16} /> NetBanking
-          </button>
-        </div>
+        {/* Form Body */}
+        <div className="p-6">
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-rose-950/80 border border-rose-500/40 rounded-xl text-rose-200 text-xs flex items-center gap-2 animate-fade-in">
+              <AlertCircle size={15} className="shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
-        {/* Razorpay Body Form */}
-        <div className="rzp-body">
-          {selectedMethod === 'upi' && (
-            <div className="rzp-upi-section">
-              <p className="rzp-section-label">Pay with Any UPI App</p>
-              <div className="upi-apps-row">
-                <div className="upi-app-pill active">
-                  <span className="app-dot gpay">G</span> Google Pay
-                </div>
-                <div className="upi-app-pill">
-                  <span className="app-dot phonepe">P</span> PhonePe
-                </div>
-                <div className="upi-app-pill">
-                  <span className="app-dot paytm">Pay</span> Paytm
-                </div>
-              </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                <User size={13} className="text-sky-400" />
+                <span>Full Name <span className="text-rose-400">*</span></span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setErrorMessage(""); }}
+                placeholder="e.g. Rahul Sharma"
+                required
+                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
+              />
+            </div>
 
-              <div className="upi-input-group">
-                <label className="input-lbl">Or Enter Virtual Payment Address (VPA / UPI ID)</label>
-                <div className="upi-input-wrapper">
-                  <input 
-                    type="text" 
-                    value={upiVpa} 
-                    onChange={(e) => setUpiVpa(e.target.value)}
-                    placeholder="mobile@upi or username@okhdfcbank"
-                    className="upi-text-input"
+            {/* Mobile & Email 2-col */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                  <Smartphone size={13} className="text-sky-400" />
+                  <span>Phone Number <span className="text-rose-400">*</span></span>
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-2.5 bg-slate-800 border border-r-0 border-slate-700 rounded-l-xl text-xs text-slate-300 font-medium">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => { 
+                      setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10)); 
+                      setErrorMessage(""); 
+                    }}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    required
+                    className="w-full px-3 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-r-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
                   />
-                  <span className="upi-verified-badge"><Check size={14} /> Verified</span>
                 </div>
               </div>
-            </div>
-          )}
 
-          {selectedMethod === 'card' && (
-            <div className="rzp-card-section">
-              <p className="rzp-section-label">Credit or Debit Card</p>
-              <div className="card-input-box">
-                <label className="input-lbl">Card Number</label>
-                <input type="text" placeholder="4111 2222 3333 4444" defaultValue="4532 •••• •••• 8921" className="upi-text-input font-mono" />
-                <div className="card-sub-row">
-                  <div>
-                    <label className="input-lbl">Expiry</label>
-                    <input type="text" placeholder="MM/YY" defaultValue="08/28" className="upi-text-input text-center" />
-                  </div>
-                  <div>
-                    <label className="input-lbl">CVV</label>
-                    <input type="password" placeholder="CVV" defaultValue="•••" maxLength={4} className="upi-text-input text-center" />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                  <Mail size={13} className="text-sky-400" />
+                  <span>Gmail / Email <span className="text-rose-400">*</span></span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setErrorMessage(""); }}
+                  placeholder="yourname@gmail.com"
+                  required
+                  className="w-full px-3 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
+                />
               </div>
             </div>
-          )}
 
-          {selectedMethod === 'netbanking' && (
-            <div className="rzp-nb-section">
-              <p className="rzp-section-label">Popular Indian Banks</p>
-              <div className="bank-selection-grid">
-                <div className="bank-card active">HDFC Bank</div>
-                <div className="bank-card">ICICI Bank</div>
-                <div className="bank-card">State Bank of India</div>
-                <div className="bank-card">Axis Bank</div>
-              </div>
+            {/* Supported Payment Logos Tag */}
+            <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+                GPay, PhonePe, Paytm, Cards & NetBanking
+              </span>
+              <span className="text-slate-400 font-medium">Auto-Capture</span>
             </div>
-          )}
 
-          {/* Itemized Order Breakdown */}
-          <div className="rzp-order-summary-box">
-            <div className="summary-line">
-              <span>{itinerary.destination} Complete Digital Itinerary</span>
-              <span>₹{totalPayable.toFixed(2)}</span>
-            </div>
-            <div className="summary-line text-xs text-emerald-600">
-              <span>Instant Digital Access</span>
-              <span>All Taxes & Charges Included</span>
-            </div>
-            <div className="summary-divider"></div>
-            <div className="summary-line total-line font-bold">
-              <span>Total Payable</span>
-              <span className="text-emerald-700">₹{totalPayable.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Pay Buttons: Guaranteed 100% working payment flow */}
-          <div className="flex flex-col gap-2.5">
-            <button 
-              className="btn-rzp-submit shadow-lg"
-              onClick={isCustomKey ? handleOpenOfficialRazorpay : handleSimulatePayment}
-              disabled={isProcessing}
-              id="btn-confirm-rzp-payment"
-            >
-              {isProcessing ? (
-                <span className="btn-processing-content flex items-center justify-center gap-2">
-                  <Loader2 size={18} className="animate-spin" /> {processingStep || 'Processing payment...'}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <CreditCard size={18} /> Pay ₹{totalPayable.toFixed(2)} Securely
-                </span>
-              )}
-            </button>
-
+            {/* Submit Button */}
             <button
-              type="button"
-              className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200 transition-colors flex items-center justify-center gap-1.5"
-              onClick={handleSimulatePayment}
+              type="submit"
               disabled={isProcessing}
-              id="btn-instant-test-approve"
+              className="mt-2 w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-900/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <CheckCircle2 size={14} className="text-emerald-600" />
-              <span>⚡ Instant Test Simulation (Auto-Approve ₹99)</span>
+              <Lock size={15} />
+              <span>{isProcessing ? "Connecting to Razorpay..." : "Proceed to Pay ₹99 via Razorpay / GPay"}</span>
+              <span className="text-sky-200">→</span>
             </button>
-          </div>
 
-          {/* Security Compliance Footer */}
-          <div className="rzp-footer-security">
-            <ShieldCheck size={14} className="text-emerald-600" />
-            <span>Razorpay Test Sandbox Enabled  •  256-bit SSL Encryption</span>
-          </div>
+            {/* Security Guarantee Strip */}
+            <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+              <ShieldCheck size={14} className="text-emerald-400" />
+              <span>Official Razorpay 256-Bit SSL • Instant PDF Delivered to Gmail</span>
+            </div>
+          </form>
         </div>
       </div>
     </div>

@@ -13,6 +13,10 @@
       "destination": "/api/stats.js?action=activities"
     },
     {
+      "source": "/api/orders/create-razorpay-order",
+      "destination": "/api/orders.js?action=create-razorpay-order"
+    },
+    {
       "source": "/api/orders/initiate",
       "destination": "/api/orders.js?action=initiate"
     },
