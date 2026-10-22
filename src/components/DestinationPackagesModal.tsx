@@ -440,13 +440,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
 
                       {/* Card Bottom Pricing & Action */}
                       <div className="mmt-card-footer">
-                        {!hasPurchased && (
-                          <div className="mmt-savings-tag">
-                            You save 42%
-                          </div>
-                        )}
-
-                        <div className="mmt-price-cta-row">
+                        <div className="mmt-price-summary-row">
                           <div className="mmt-price-col">
                             {hasPurchased ? (
                               <div className="mmt-active-price">
@@ -466,21 +460,28 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                             )}
                           </div>
 
+                          {!hasPurchased && (
+                            <div className="mmt-savings-tag">
+                              You save 42%
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mmt-actions-row">
                           {hasPurchased ? (
                             <button 
                               className="btn-pkg-view"
-                              style={{ fontSize: '11px', padding: '6px 14px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onSelectPackage(pkg);
                               }}
                             >
-                              View Itinerary
+                              <CheckCircle2 size={15} />
+                              <span>View Itinerary</span>
                             </button>
                           ) : (
                             <button 
                               className="btn-pkg-buy"
-                              style={{ fontSize: '11px', padding: '6px 14px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (onPayToView) {
@@ -490,7 +491,7 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                                 }
                               }}
                             >
-                              Buy Now
+                              <span>Buy Now</span>
                             </button>
                           )}
                         </div>

@@ -1692,47 +1692,61 @@ a {
 }
 
 .btn-pkg-buy {
-  padding: 8px 15px;
+  padding: 10px 18px;
   background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
   border: none;
   color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 800;
-  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 9999px;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.btn-pkg-buy:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(2, 132, 199, 0.45);
-  background: linear-gradient(135deg, #0369A1 0%, #075985 100%);
-}
-
-.btn-pkg-view {
-  padding: 8px 15px;
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  border: none;
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 800;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  text-align: center;
+}
+
+.btn-pkg-buy:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.42);
+  background: linear-gradient(135deg, #0369A1 0%, #075985 100%);
+}
+
+.btn-pkg-buy:active {
+  transform: translateY(0);
+}
+
+.btn-pkg-view {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border: none;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
 }
 
 .btn-pkg-view:hover {
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(5, 150, 105, 0.45);
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.42);
   background: linear-gradient(135deg, #047857 0%, #065F46 100%);
+}
+
+.btn-pkg-view:active {
+  transform: translateY(0);
 }
 
 /* ==========================================================================
@@ -5866,7 +5880,7 @@ a {
 
   .pkg-actions-col {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 8px;
     width: 100%;
   }
@@ -5874,16 +5888,36 @@ a {
   .btn-pkg-details {
     width: 100%;
     text-align: center;
-    padding: 9px 10px;
-    font-size: 12.5px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 9999px;
   }
 
   .btn-pkg-buy {
     width: 100%;
     text-align: center;
-    padding: 9px 10px;
-    font-size: 12.5px;
-    font-weight: 800;
+    padding: 11px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .btn-pkg-view {
+    width: 100%;
+    text-align: center;
+    padding: 11px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   /* Carousel Track on Mobile */
@@ -6690,10 +6724,40 @@ a {
     line-height: 1.35 !important;
   }
 
+  .mmt-card-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding-top: 12px !important;
+    width: 100% !important;
+  }
+
+  .mmt-price-summary-row,
   .mmt-price-cta-row {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .mmt-actions-row {
+    width: 100% !important;
+  }
+
+  .mmt-actions-row .btn-pkg-buy,
+  .mmt-actions-row .btn-pkg-view {
+    width: 100% !important;
+    height: 42px !important;
+    padding: 0 16px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    border-radius: 9999px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
   }
 
   .mmt-action-indicator {
@@ -9982,39 +10046,73 @@ a {
 
 .mmt-card-footer {
   border-top: 1px solid #F1F5F9;
-  padding-top: 10px;
+  padding-top: 12px;
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.mmt-price-summary-row,
+.mmt-price-cta-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
 }
 
 .mmt-savings-tag {
   font-size: 11px;
   font-weight: 700;
   color: #0D9488;
-  text-align: right;
-  margin-bottom: 2px;
+  background: #F0FDFA;
+  border: 1px solid #CCFBF1;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
-.mmt-price-cta-row {
+.mmt-actions-row {
+  width: 100%;
+}
+
+.mmt-actions-row .btn-pkg-buy,
+.mmt-actions-row .btn-pkg-view {
+  width: 100%;
+  min-height: 40px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 9999px;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
 .mmt-price-col {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .mmt-orig-price {
   font-size: 11px;
   color: #94A3B8;
   text-decoration: line-through;
+  line-height: 1.2;
 }
 
 .mmt-active-price {
   display: flex;
   align-items: baseline;
   gap: 2px;
+  white-space: nowrap;
 }
 
 .mmt-active-price .curr {
@@ -10028,12 +10126,14 @@ a {
   font-size: 22px;
   font-weight: 800;
   color: #0F172A;
+  line-height: 1;
 }
 
 .mmt-active-price .unit {
   font-size: 11px;
   color: #64748B;
   margin-left: 3px;
+  white-space: nowrap;
 }
 
 .mmt-action-indicator {
