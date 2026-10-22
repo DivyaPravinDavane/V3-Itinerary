@@ -88,12 +88,32 @@ export interface RealtimeStats {
  * Automatically reconnects if connection drops.
  */
 export function subscribeToRealtimeEvents(onEvent: (event: string, data: any) => void): () => void {
+  // On deployed serverless hosting (Vercel) without a dedicated backend server URL,
+  // do not open continuous EventSource stream to avoid 404s and reconnect loops.
+  const isServerlessDeploy = typeof window !== 'undefined' && 
+    window.location.hostname !== 'localhost' && 
+    !(import.meta as any).env?.VITE_API_URL;
+
+  if (isServerlessDeploy) {
+    return () => {};
+  }
+
   let eventSource: EventSource | null = null;
   let reconnectTimeout: any = null;
+  let failureCount = 0;
+  const MAX_RETRIES = 2;
 
   function connect() {
+    if (failureCount >= MAX_RETRIES) {
+      return;
+    }
+
     try {
       eventSource = new EventSource(`${API_BASE_URL}/realtime/stream`);
+
+      eventSource.onopen = () => {
+        failureCount = 0;
+      };
 
       eventSource.addEventListener('connected', (e) => {
         try {
@@ -150,14 +170,20 @@ export function subscribeToRealtimeEvents(onEvent: (event: string, data: any) =>
       });
 
       eventSource.onerror = () => {
+        failureCount++;
         if (eventSource) {
           eventSource.close();
           eventSource = null;
         }
-        reconnectTimeout = setTimeout(connect, 4000);
+        if (failureCount < MAX_RETRIES) {
+          reconnectTimeout = setTimeout(connect, 6000);
+        }
       };
     } catch (err) {
-      reconnectTimeout = setTimeout(connect, 4000);
+      failureCount++;
+      if (failureCount < MAX_RETRIES) {
+        reconnectTimeout = setTimeout(connect, 6000);
+      }
     }
   }
 
