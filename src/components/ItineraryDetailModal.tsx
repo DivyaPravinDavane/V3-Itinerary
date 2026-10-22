@@ -39,6 +39,11 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
   const hasPurchased = Boolean(isPurchased || order);
 
   const handleDownloadPDF = () => {
+    if (!hasPurchased) {
+      alert("This PDF itinerary is protected. Please complete payment via Google Pay or Razorpay to view and download.");
+      return;
+    }
+
     if (itinerary?.pdfUrl) {
       const link = document.createElement('a');
       link.href = itinerary.pdfUrl;
@@ -56,7 +61,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
       destination: itinerary.destination,
       amountPaid: 99.00,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      paymentMethod: 'UPI (Razorpay Verified)',
+      paymentMethod: 'UPI / Razorpay Live Verified',
       razorpayPaymentId: 'pay_unlocked_itinerary',
       agentName: itinerary.agent?.agencyName || 'V3 Curators',
       agentPhone: itinerary.agent?.phone || '+91 98203 89694',
@@ -214,8 +219,8 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
 
                 <div className="razorpay-action-card">
                   <div className="rzp-badge-strip">
-                    <span className="rzp-brand-tag">Razorpay Verified Checkout</span>
-                    <span className="rzp-security-tag"><ShieldCheck size={13} /> 256-Bit Encrypted</span>
+                    <span className="rzp-brand-tag">Razorpay Live Checkout</span>
+                    <span className="rzp-security-tag"><ShieldCheck size={13} /> 256-Bit SSL Live</span>
                   </div>
 
                   <div className="rzp-price-row">
@@ -223,7 +228,7 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                       <span className="rzp-total-lbl">Total Payable:</span>
                       <div className="rzp-price-amount">₹99.00</div>
                     </div>
-                    <span className="rzp-all-inc">All Taxes Included • Instant Access</span>
+                    <span className="rzp-all-inc">All Taxes Included • Instant PDF Unlock</span>
                   </div>
 
                   <button 
@@ -232,11 +237,11 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                     id="btn-split-pay-razorpay"
                   >
                     <CreditCard size={18} />
-                    <span>Buy Now • ₹99</span>
+                    <span>Pay ₹99 via Google Pay / Razorpay</span>
                   </button>
 
                   <p className="rzp-guarantee-note">
-                    Instant access: UPI (GPay, PhonePe, Paytm), Cards & NetBanking supported.
+                    Instant PDF unlock: Google Pay (GPay), UPI, Credit/Debit Cards & NetBanking supported.
                   </p>
                 </div>
               </div>

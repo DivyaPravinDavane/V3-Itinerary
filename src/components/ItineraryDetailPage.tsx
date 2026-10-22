@@ -45,6 +45,11 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
   }, [itinerary.id]);
 
   const handleDownloadPDF = () => {
+    if (!hasPurchased) {
+      alert("This PDF itinerary is protected. Please complete payment via Google Pay or Razorpay to view and download.");
+      return;
+    }
+
     const activeOrder: OrderRecord = order || {
       orderId: `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-99`,
       itineraryId: itinerary.id,
@@ -52,7 +57,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
       destination: itinerary.destination,
       amountPaid: 99.00,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      paymentMethod: 'UPI (Razorpay Verified)',
+      paymentMethod: 'UPI / Razorpay Live Verified',
       razorpayPaymentId: 'pay_unlocked_itinerary',
       agentName: itinerary.agent?.agencyName || 'V3 Curators',
       agentPhone: itinerary.agent?.phone || '+91 98203 89694',
@@ -223,18 +228,27 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
 
                         {isOpen && (
                           <div className="day-accordion-body animate-slide-down">
-                            <div className="day-time-block morning">
-                              <span className="time-badge">🌅 Morning</span>
-                              <p className="time-desc">{day.morning}</p>
-                            </div>
-                            <div className="day-time-block afternoon">
-                              <span className="time-badge">☀️ Afternoon</span>
-                              <p className="time-desc">{day.afternoon}</p>
-                            </div>
-                            <div className="day-time-block evening">
-                              <span className="time-badge">🌙 Evening</span>
-                              <p className="time-desc">{day.evening}</p>
-                            </div>
+                            {hasPurchased ? (
+                              <>
+                                <div className="day-time-block morning">
+                                  <span className="time-badge">🌅 Morning</span>
+                                  <p className="time-desc">{day.morning}</p>
+                                </div>
+                                <div className="day-time-block afternoon">
+                                  <span className="time-badge">☀️ Afternoon</span>
+                                  <p className="time-desc">{day.afternoon}</p>
+                                </div>
+                                <div className="day-time-block evening">
+                                  <span className="time-badge">🌙 Evening</span>
+                                  <p className="time-desc">{day.evening}</p>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl my-2 text-xs text-amber-900 flex items-center gap-2">
+                                <ShieldCheck size={16} className="text-amber-600 shrink-0" />
+                                <span>Detailed hour-by-hour routing, landmark timings, and offline PDF guide unlock upon ₹99 payment via Google Pay or Razorpay.</span>
+                              </div>
+                            )}
 
                             <div className="day-highlights-footer">
                               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Day Highlights:</span>

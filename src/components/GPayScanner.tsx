@@ -78,13 +78,28 @@ export const GPayScanner: React.FC<GPayScannerProps> = ({
     }
   };
 
-  const handleVerifyPaid = () => {
+  const [verifyError, setVerifyError] = useState('');
+
+  const handleVerifyPaid = async () => {
     setIsVerifying(true);
-    setTimeout(() => {
+    setVerifyError('');
+    try {
+      const res = await fetch(`/api/orders?orderId=${encodeURIComponent(orderId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.order && (data.order.status === 'PAID' || data.order.status === 'CONFIRMED')) {
+          setIsVerifying(false);
+          const realPid = data.order.razorpay_payment_id || `pay_live_verified_${Date.now()}`;
+          onPaymentComplete(realPid);
+          return;
+        }
+      }
       setIsVerifying(false);
-      const generatedPid = `pay_live_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-      onPaymentComplete(generatedPid);
-    }, 1200);
+      setVerifyError('No completed live transaction found yet. Please complete the payment via Google Pay or click the button below to pay directly.');
+    } catch (err: any) {
+      setIsVerifying(false);
+      setVerifyError('Could not verify transaction with server. Please try paying directly with Google Pay / Razorpay below.');
+    }
   };
 
   return (
@@ -226,10 +241,16 @@ export const GPayScanner: React.FC<GPayScannerProps> = ({
           ) : (
             <>
               <Check size={16} className="text-white" />
-              <span>I Have Paid ₹{amount.toFixed(2)}</span>
+              <span>Verify Payment Status (₹{amount.toFixed(2)})</span>
             </>
           )}
         </button>
+
+        {verifyError && (
+          <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs text-center font-medium animate-fade-in mt-1">
+            {verifyError}
+          </div>
+        )}
       </div>
     </div>
   );

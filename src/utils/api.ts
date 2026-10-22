@@ -1128,3 +1128,37 @@ export async function createRazorpayOrder(amount: number = 99, receipt?: string,
   }
   return null;
 }
+
+/**
+ * Verify Razorpay / Google Pay payment with backend before unlocking PDF
+ */
+export async function verifyRazorpayPayment({
+  orderId,
+  razorpayPaymentId,
+  razorpayOrderId,
+  razorpaySignature
+}: {
+  orderId: string;
+  razorpayPaymentId: string;
+  razorpayOrderId?: string;
+  razorpaySignature?: string;
+}): Promise<{ success: boolean; verified: boolean; error?: string; order?: any }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/verify-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId,
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature
+      })
+    });
+    const data = await response.json();
+    return data;
+  } catch (err: any) {
+    console.error("Payment verification network error:", err);
+    return { success: false, verified: false, error: err.message || "Network error verifying payment" };
+  }
+}
+

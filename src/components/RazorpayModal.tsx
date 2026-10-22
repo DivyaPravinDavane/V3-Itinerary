@@ -107,10 +107,10 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
                 borderRadius: "6px",
                 letterSpacing: "0.5px"
               }}>
-                RAZORPAY
+                RAZORPAY LIVE
               </span>
               <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={13} /> Official Checkout
+                <CheckCircle2 size={13} /> Live Payment Gateway
               </span>
             </div>
             <button 
@@ -127,7 +127,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
             <Sparkles size={16} className="text-amber-400" />
           </h3>
           <p className="text-xs text-slate-300 mt-1">
-            Enter your contact details to deliver your PDF guide & proceed to secure Google Pay / Razorpay checkout.
+            Complete payment via Google Pay (GPay) or Razorpay to instantly view, unlock, and download your comprehensive PDF itinerary.
           </p>
         </div>
 

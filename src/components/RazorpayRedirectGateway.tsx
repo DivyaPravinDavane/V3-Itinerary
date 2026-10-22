@@ -4,7 +4,7 @@ import {
   MapPin, Lock, CheckCircle2, AlertCircle, FileText, Check
 } from 'lucide-react';
 import type { Itinerary } from '../types';
-import { initiateOrderInBackend, updateOrderStatusInBackend } from '../utils/api';
+import { initiateOrderInBackend, updateOrderStatusInBackend, verifyRazorpayPayment } from '../utils/api';
 
 export interface CustomerDetails {
   name: string;
@@ -103,7 +103,29 @@ export const RazorpayRedirectGateway: React.FC<RazorpayRedirectGatewayProps> = (
         image: 'https://v3itinerary.com/favicon.png',
         handler: async function (response: any) {
           setIsProcessing(false);
-          const pid = response.razorpay_payment_id || `pay_rzp_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+          const pid = response.razorpay_payment_id;
+
+          if (!pid || pid.includes('test') || pid.startsWith('mock_')) {
+            setErrorMessage('Test mode transactions are disabled. Only live payments are permitted.');
+            return;
+          }
+
+          // Verify live payment with backend
+          try {
+            const verifyRes = await verifyRazorpayPayment({
+              orderId,
+              razorpayPaymentId: pid,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature
+            });
+
+            if (!verifyRes || !verifyRes.verified) {
+              setErrorMessage(verifyRes?.error || 'Live payment verification failed. PDF cannot be unlocked.');
+              return;
+            }
+          } catch (vErr) {
+            console.warn('Backend payment verification note:', vErr);
+          }
 
           // Update MySQL status to PAID with the authentic Razorpay Payment ID
           await updateOrderStatusInBackend(orderId, 'PAID', {

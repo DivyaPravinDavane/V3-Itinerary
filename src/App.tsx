@@ -678,7 +678,6 @@ export function App() {
     const returnedPaymentId = urlParams.get('razorpay_payment_id') || urlParams.get('payment_id');
 
     if (returnedOrderId && (returnedStatus === 'paid' || returnedPaymentId)) {
-      const pid = returnedPaymentId || `pay_live_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       window.history.replaceState({}, document.title, window.location.pathname);
 
       (async () => {
@@ -686,11 +685,13 @@ export function App() {
           const res = await fetch(`/api/orders?orderId=${encodeURIComponent(returnedOrderId)}`);
           if (res.ok) {
             const data = await res.json();
-            if (data?.order) {
-              const matched = allItineraries.find(it => it.id === data.order.itinerary_id) || allItineraries[0];
+            // Strictly check that the order has been verified as PAID in the database
+            if (data?.order && (data.order.status === 'PAID' || data.order.status === 'CONFIRMED')) {
+              const matched = allItineraries.find(it => it.id === data.order.itinerary_id) || allItineraries.find(it => it.destination.toLowerCase() === (data.order.destination || '').toLowerCase());
               if (matched) {
+                const verifiedPid = data.order.razorpay_payment_id || returnedPaymentId || '';
                 handlePaymentSuccess(
-                  pid,
+                  verifiedPid,
                   returnedOrderId,
                   matched,
                   data.order.customer_email,
@@ -703,14 +704,12 @@ export function App() {
                 );
                 return;
               }
+            } else {
+              showToast('Payment verification pending or incomplete. Please contact support if amount was deducted.');
             }
           }
         } catch (e) {
           console.warn('Payment callback check notice:', e);
-        }
-
-        if (allItineraries.length > 0) {
-          handlePaymentSuccess(pid, returnedOrderId, allItineraries[0]);
         }
       })();
     }
@@ -727,6 +726,9 @@ export function App() {
     if (!itineraryId) return false;
     const target = allItineraries.find(it => it.id === itineraryId);
     return user.purchasedOrders.some(order => {
+      // Must have an authentic payment ID (starts with pay_)
+      const hasPayment = Boolean(order.razorpayPaymentId && order.razorpayPaymentId.startsWith('pay_'));
+      if (!hasPayment) return false;
       if (order.itineraryId === itineraryId) return true;
       if (target && order.itineraryTitle && target.title) {
         if (order.itineraryTitle.trim().toLowerCase() === target.title.trim().toLowerCase()) return true;
@@ -738,6 +740,8 @@ export function App() {
   const getOrderForItinerary = (itineraryId: string) => {
     const target = allItineraries.find(it => it.id === itineraryId);
     return user.purchasedOrders.find(order => {
+      const hasPayment = Boolean(order.razorpayPaymentId && order.razorpayPaymentId.startsWith('pay_'));
+      if (!hasPayment) return false;
       if (order.itineraryId === itineraryId) return true;
       if (target && order.itineraryTitle && target.title) {
         return order.itineraryTitle.trim().toLowerCase() === target.title.trim().toLowerCase();

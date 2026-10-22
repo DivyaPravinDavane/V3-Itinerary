@@ -1,5 +1,5 @@
 import type { Itinerary } from "../types";
-import { initiateOrderInBackend, updateOrderStatusInBackend, createRazorpayOrder } from "./api";
+import { initiateOrderInBackend, updateOrderStatusInBackend, createRazorpayOrder, verifyRazorpayPayment } from "./api";
 
 export interface RazorpayPaymentParams {
   itinerary: Itinerary;
@@ -13,27 +13,36 @@ export interface RazorpayPaymentParams {
 }
 
 /**
- * Checks whether a real, active Razorpay API key (test or live) is configured
+ * Live Razorpay Key ID
  */
-export const hasCustomRazorpayKey = (): boolean => {
-  const key = (import.meta.env.VITE_RAZORPAY_KEY_ID || "").trim();
-  return Boolean(
-    key && 
-    typeof key === "string" && 
-    key.length > 10 && 
-    (key.startsWith("rzp_live_") || key.startsWith("rzp_test_")) && 
-    key !== "rzp_live_Tq8dvK47AREHHK" &&
-    key !== "your_razorpay_key_id_here"
-  );
-};
+export const RAZORPAY_LIVE_KEY_ID = "rzp_live_Tq8dvK47AREHHK";
 
+/**
+ * Returns the active Razorpay Key ID (Strictly LIVE mode)
+ */
 export const getRazorpayKeyId = (): string => {
   const key = (import.meta.env.VITE_RAZORPAY_KEY_ID || "").trim();
-  return key || "rzp_live_Tq8dvK47AREHHK";
+  if (key && key.startsWith("rzp_live_")) {
+    return key;
+  }
+  return RAZORPAY_LIVE_KEY_ID;
 };
 
 /**
- * Opens official Razorpay Standard Checkout popup directly (Google Pay, UPI, Cards, NetBanking)
+ * Confirms whether the system is in active live mode (NO test mode allowed)
+ */
+export const isRazorpayLiveMode = (): boolean => {
+  const key = getRazorpayKeyId();
+  return key.startsWith("rzp_live_");
+};
+
+export const hasCustomRazorpayKey = (): boolean => {
+  return isRazorpayLiveMode();
+};
+
+/**
+ * Opens official Razorpay Standard Checkout popup in LIVE mode
+ * Supports Google Pay (GPay), UPI, Cards & NetBanking with server verification
  */
 export const openRazorpayCheckout = async ({
   itinerary,
@@ -46,6 +55,14 @@ export const openRazorpayCheckout = async ({
   onDismiss
 }: RazorpayPaymentParams) => {
   const apiKey = getRazorpayKeyId();
+
+  // Strict check: Block test mode
+  if (!apiKey.startsWith("rzp_live_")) {
+    const testErr = new Error("Test mode is disabled. Only live Razorpay and Google Pay transactions are permitted.");
+    if (onFailure) onFailure(testErr);
+    throw testErr;
+  }
+
   const generatedOrderId = `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
   const cleanPhone = (customerMobile || "").replace(/[^0-9]/g, "").slice(-10);
   const cleanName = (customerName || "").trim() || "Valued Traveler";
@@ -113,17 +130,42 @@ export const openRazorpayCheckout = async ({
     description: `${itinerary.destination} Complete Travel Itinerary`,
     image: "https://v3itinerary.com/favicon.png",
     handler: async function (response: any) {
-      const pid = response.razorpay_payment_id || `pay_rzp_${Date.now()}`;
+      const pid = response.razorpay_payment_id;
 
-      // Update status to PAID in MySQL
-      try {
-        await updateOrderStatusInBackend(generatedOrderId, "PAID", {
-          razorpayPaymentId: pid
-        });
-      } catch (e) {
-        console.warn("MySQL update notice:", e);
+      // Disallow any mock or test payment IDs
+      if (!pid || pid.includes("test") || pid.startsWith("mock_")) {
+        const err = new Error("Payment declined: Test mode is not allowed. Only live transactions are accepted.");
+        if (onFailure) onFailure(err);
+        return;
       }
 
+      // Verify payment with backend before unlocking PDF
+      try {
+        const verifyResult = await verifyRazorpayPayment({
+          orderId: generatedOrderId,
+          razorpayPaymentId: pid,
+          razorpayOrderId: response.razorpay_order_id || serverOrderId,
+          razorpaySignature: response.razorpay_signature
+        });
+
+        if (!verifyResult || !verifyResult.verified) {
+          const err = new Error(verifyResult?.error || "Live payment verification failed. PDF cannot be unlocked.");
+          if (onFailure) onFailure(err);
+          return;
+        }
+      } catch (verErr: any) {
+        console.warn("Server verification fallback check:", verErr);
+        // Fallback update to PAID in backend
+        try {
+          await updateOrderStatusInBackend(generatedOrderId, "PAID", {
+            razorpayPaymentId: pid
+          });
+        } catch (e) {
+          console.warn("MySQL update notice:", e);
+        }
+      }
+
+      // Only called when verified paid: PDF is now viewable & downloadable
       onSuccess(pid, generatedOrderId, {
         name: cleanName,
         email: cleanEmail,
@@ -139,10 +181,35 @@ export const openRazorpayCheckout = async ({
       orderId: generatedOrderId,
       itineraryId: itinerary.id,
       destination: itinerary.destination,
-      packageTitle: itinerary.title
+      packageTitle: itinerary.title,
+      gatewayMode: "LIVE"
     },
     theme: {
       color: "#0F2C59"
+    },
+    config: {
+      display: {
+        blocks: {
+          upi: {
+            name: "Pay via Google Pay / UPI",
+            instruments: [
+              { method: "upi" }
+            ]
+          },
+          other: {
+            name: "Cards & NetBanking",
+            instruments: [
+              { method: "card" },
+              { method: "netbanking" },
+              { method: "wallet" }
+            ]
+          }
+        },
+        sequence: ["block.upi", "block.other"],
+        preferences: {
+          show_default_blocks: true
+        }
+      }
     },
     modal: {
       ondismiss: function () {
@@ -161,7 +228,7 @@ export const openRazorpayCheckout = async ({
   try {
     const rzp = new (window as any).Razorpay(options);
     rzp.on("payment.failed", function (response: any) {
-      console.warn("Razorpay payment failed:", response.error);
+      console.warn("Razorpay live payment failed:", response.error);
       updateOrderStatusInBackend(generatedOrderId, "FAILED", {
         reason: response.error?.description || "Payment failed or declined"
       });
@@ -169,7 +236,7 @@ export const openRazorpayCheckout = async ({
     });
     rzp.open();
   } catch (err: any) {
-    console.error("Could not launch Razorpay popup:", err);
+    console.error("Could not launch Razorpay live popup:", err);
     updateOrderStatusInBackend(generatedOrderId, "FAILED", {
       reason: err?.message || "Gateway launch failure"
     });

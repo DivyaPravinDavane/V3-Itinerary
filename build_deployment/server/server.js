@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import {
   initDatabase,
@@ -305,6 +306,93 @@ app.post("/api/orders/create-razorpay-order", async (req, res) => {
   } catch (error) {
     console.error("Error creating Razorpay order:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── 5d. Official Live Razorpay & Google Pay Payment Verification ────────────
+app.post("/api/orders/verify-payment", async (req, res) => {
+  try {
+    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    if (!orderId || !razorpayPaymentId) {
+      return res.status(400).json({ success: false, error: "Missing orderId or razorpayPaymentId" });
+    }
+
+    // Strictly disallow test mode payments
+    if (razorpayPaymentId.includes("test") || razorpayPaymentId.startsWith("mock_")) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Test mode transactions are strictly disabled. Only live Google Pay and Razorpay payments are accepted." 
+      });
+    }
+
+    const keyId = (process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_Tq8dvK47AREHHK").trim();
+    const keySecret = (process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "OqRL5KUsn0Eof6YuydfXWyMu").trim();
+
+    // 1. If HMAC signature is provided, verify SHA256 signature
+    let signatureValid = false;
+    if (razorpayOrderId && razorpaySignature) {
+      const expectedSignature = crypto
+        .createHmac("sha256", keySecret)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest("hex");
+      signatureValid = expectedSignature === razorpaySignature;
+    }
+
+    // 2. Query Razorpay Live API to verify genuine payment status
+    let apiVerified = false;
+    let paymentDetails = null;
+    try {
+      const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+      const rzpRes = await fetch(`https://api.razorpay.com/v1/payments/${razorpayPaymentId}`, {
+        headers: { "Authorization": `Basic ${auth}` }
+      });
+      if (rzpRes.ok) {
+        paymentDetails = await rzpRes.json();
+        if (
+          paymentDetails && 
+          (paymentDetails.status === "captured" || paymentDetails.status === "authorized") &&
+          paymentDetails.amount >= 9900 &&
+          paymentDetails.currency === "INR"
+        ) {
+          apiVerified = true;
+        }
+      }
+    } catch (e) {
+      console.warn("Razorpay live payment fetch note:", e.message);
+    }
+
+    // Only grant PDF access if verified with live Razorpay
+    if (!signatureValid && !apiVerified) {
+      console.warn(`❌ [Razorpay] Payment verification failed for Order ${orderId}, PID: ${razorpayPaymentId}`);
+      await updateOrderStatus(orderId, "FAILED", { 
+        razorpayPaymentId, 
+        reason: "Payment verification failed with Razorpay Live Gateway" 
+      });
+      return res.status(400).json({
+        success: false,
+        error: "Payment verification failed. Could not confirm genuine live transaction with Razorpay / Google Pay."
+      });
+    }
+
+    // Successfully verified! Update order in MySQL to PAID
+    const updatedOrder = await updateOrderStatus(orderId, "PAID", { razorpayPaymentId });
+    const stats = await getRealtimeStats();
+    broadcastRealtimeEvent("order_status_updated", { order: updatedOrder, stats });
+
+    console.log(`✅ [Razorpay Live Verified] Order ${orderId} marked PAID! Method: ${paymentDetails?.method || 'UPI/GPay/Card'}`);
+
+    res.json({
+      success: true,
+      verified: true,
+      orderId,
+      razorpayPaymentId,
+      status: "PAID",
+      method: paymentDetails?.method || "UPI / Razorpay",
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error("Error verifying Razorpay payment:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
