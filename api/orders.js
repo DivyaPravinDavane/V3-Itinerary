@@ -189,10 +189,90 @@ export default async function handler(req, res) {
         } catch (uErr) {}
       }
 
+      // Create live Razorpay Order & Payment Link for seamless Google Pay & Razorpay Checkout
+      const rzpKeyId = process.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tq8dvK47AREHHK';
+      const rzpKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET || 'OqRL5KUsn0Eof6YuydfXWyMu';
+      let razorpayOrderId = orderId;
+      let paymentLinkUrl = '';
+
+      try {
+        const authHeader = 'Basic ' + Buffer.from(`${rzpKeyId}:${rzpKeySecret}`).toString('base64');
+        
+        // 1. Create real Razorpay Live Order
+        const rzpOrderRes = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify({
+            amount: Math.round(Number(amountPaid) * 100),
+            currency: 'INR',
+            receipt: orderId.slice(0, 40),
+            notes: {
+              orderId,
+              itineraryId,
+              destination: destination || '',
+              customerEmail: customerEmail || ''
+            }
+          })
+        });
+
+        if (rzpOrderRes.ok) {
+          const rzpOrderData = await rzpOrderRes.json();
+          if (rzpOrderData.id) {
+            razorpayOrderId = rzpOrderData.id;
+          }
+        }
+
+        // 2. Create real Razorpay Live Payment Link
+        const plinkRes = await fetch('https://api.razorpay.com/v1/payment_links', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify({
+            amount: Math.round(Number(amountPaid) * 100),
+            currency: 'INR',
+            description: `${destination || 'Travel'} Itinerary Blueprint`,
+            upi_link: true,
+            customer: {
+              name: customerName || 'Valued Traveler',
+              email: customerEmail || 'traveler@v3itinerary.com',
+              contact: customerMobile || '9820389694'
+            },
+            notify: { sms: false, email: false },
+            callback_url: `https://www.v3itinerary.com/?order_id=${orderId}&status=paid`,
+            callback_method: 'get'
+          })
+        });
+
+        if (plinkRes.ok) {
+          const plinkData = await plinkRes.json();
+          if (plinkData.short_url) {
+            paymentLinkUrl = plinkData.short_url;
+          }
+        }
+      } catch (rzpErr) {
+        console.warn('[Razorpay API note]:', rzpErr.message);
+      }
+
+      // Update order with razorpayOrderId if generated
+      if (razorpayOrderId !== orderId) {
+        try {
+          await pool.query('UPDATE orders SET razorpay_order_id = ? WHERE order_id = ?', [razorpayOrderId, orderId]);
+          await pool.query('UPDATE payments SET razorpay_order_id = ? WHERE order_id = ?', [razorpayOrderId, orderId]);
+        } catch (uErr) {}
+      }
+
       return res.status(201).json({
         success: true,
         message: 'Order initiated and recorded in MySQL as INITIATED',
-        orderId
+        orderId,
+        razorpayOrderId,
+        paymentLinkUrl,
+        keyId: rzpKeyId
       });
     } catch (err) {
       console.error('Error initiating order:', err);

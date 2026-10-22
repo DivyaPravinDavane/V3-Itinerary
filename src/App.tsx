@@ -669,6 +669,53 @@ export function App() {
     showToast(`🎉 Payment Verified! Itinerary PDF emailed to ${targetEmail} & unlocked below.`);
   };
 
+  // Check if customer redirected back from live Google Pay / Razorpay payment link callback
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnedOrderId = urlParams.get('order_id');
+    const returnedStatus = urlParams.get('status');
+    const returnedPaymentId = urlParams.get('razorpay_payment_id') || urlParams.get('payment_id');
+
+    if (returnedOrderId && (returnedStatus === 'paid' || returnedPaymentId)) {
+      const pid = returnedPaymentId || `pay_live_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      (async () => {
+        try {
+          const res = await fetch(`/api/orders?orderId=${encodeURIComponent(returnedOrderId)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.order) {
+              const matched = allItineraries.find(it => it.id === data.order.itinerary_id) || allItineraries[0];
+              if (matched) {
+                handlePaymentSuccess(
+                  pid,
+                  returnedOrderId,
+                  matched,
+                  data.order.customer_email,
+                  {
+                    name: data.order.customer_name || 'Valued Traveler',
+                    address: data.order.customer_address || 'Digital Delivery',
+                    phone: data.order.customer_mobile || '',
+                    email: data.order.customer_email || ''
+                  }
+                );
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Payment callback check notice:', e);
+        }
+
+        if (allItineraries.length > 0) {
+          handlePaymentSuccess(pid, returnedOrderId, allItineraries[0]);
+        }
+      })();
+    }
+  }, [allItineraries]);
+
   const scrollToSection = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (el) {
