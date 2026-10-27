@@ -25,7 +25,7 @@ export const Footer: React.FC<FooterProps> = ({
     if (onNavigatePage) {
       onNavigatePage('policies', tab);
     } else {
-      window.location.hash = `#${tab}`;
+      window.history.pushState({}, '', `/${tab}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };

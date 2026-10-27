@@ -35,21 +35,29 @@ export const LegalPoliciesPage: React.FC<LegalPoliciesPageProps> = ({
     setActiveTab(initialTab);
   }
 
-  // Handle URL hash sync when user clicks browser back/forward buttons
+  // Handle URL sync when user clicks browser back/forward buttons
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'privacy' || hash === 'terms' || hash === 'refund' || hash === 'gst') {
-        setActiveTab(hash as PolicyTabKey);
+    const handleUrlChange = () => {
+      const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+      const hash = window.location.hash.replace(/^#+/, '').toLowerCase();
+      const tab = path || hash;
+      if (tab === 'privacy' || tab === 'terms' || tab === 'refund' || tab === 'gst') {
+        setActiveTab(tab as PolicyTabKey);
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, []);
 
   const handleSelectTab = (tab: PolicyTabKey) => {
     setActiveTab(tab);
-    window.location.hash = `#${tab}`;
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ tab }, '', `/${tab}`);
+    }
     if (onTabChange) onTabChange(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

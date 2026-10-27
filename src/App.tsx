@@ -287,50 +287,64 @@ export function App() {
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Helper to extract clean page and policy tab from browser URL (path or legacy hash)
+  const getRouteFromUrl = (): { page: 'home' | 'destinations' | 'agent-studio' | 'policies'; policyTab?: PolicyTabKey } => {
+    if (typeof window === 'undefined') return { page: 'home' };
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+    const hash = window.location.hash.replace(/^#+/, '').toLowerCase();
+    const segment = path || hash;
+
+    if (segment === 'destinations') {
+      return { page: 'destinations' };
+    }
+    if (segment === 'agent-studio' || segment === 'agentstudio' || segment === 'agent') {
+      return { page: 'agent-studio' };
+    }
+    if (['privacy', 'terms', 'refund', 'gst'].includes(segment)) {
+      return { page: 'policies', policyTab: segment as PolicyTabKey };
+    }
+    if (segment === 'policies' || segment === 'legal') {
+      return { page: 'policies', policyTab: 'privacy' };
+    }
+    return { page: 'home' };
+  };
+
   // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio' | 'policies')
   const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio' | 'policies'>(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      if (hash === '#destinations') return 'destinations';
-      if (hash === '#agent-studio') return 'agent-studio';
-      if (['#policies', '#privacy', '#terms', '#refund', '#gst'].includes(hash)) return 'policies';
-    }
-    return 'home';
+    return getRouteFromUrl().page;
   });
 
   const [activePolicyTab, setActivePolicyTab] = useState<PolicyTabKey>(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'privacy' || hash === 'terms' || hash === 'refund' || hash === 'gst') {
-        return hash as PolicyTabKey;
-      }
-    }
-    return 'privacy';
+    return getRouteFromUrl().policyTab || 'privacy';
   });
 
-  // Synchronize browser history / URL hash navigation
+  // Synchronize browser history (Back/Forward) and automatically strip any legacy hashtags
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash;
-      if (hash === '#destinations') {
-        setCurrentPage('destinations');
-        setSelectedDestinationName(null);
-      } else if (hash === '#agent-studio') {
-        setCurrentPage('agent-studio');
-        setSelectedDestinationName(null);
-      } else if (['#privacy', '#terms', '#refund', '#gst'].includes(hash)) {
-        setCurrentPage('policies');
-        setActivePolicyTab(hash.replace('#', '') as PolicyTabKey);
-        setSelectedDestinationName(null);
-      } else if (hash === '#policies') {
-        setCurrentPage('policies');
-        setSelectedDestinationName(null);
-      } else if (hash === '#home' || hash === '') {
-        setCurrentPage('home');
+    const syncRouteFromLocation = () => {
+      const route = getRouteFromUrl();
+      setCurrentPage(route.page);
+      if (route.policyTab) {
+        setActivePolicyTab(route.policyTab);
+      }
+      setSelectedDestinationName(null);
+
+      // Cleanly replace any legacy # in the URL with a clean pathname
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const cleanPath = route.page === 'home' 
+          ? '/' 
+          : (route.policyTab ? `/${route.policyTab}` : `/${route.page}`);
+        window.history.replaceState({ page: route.page, policyTab: route.policyTab }, '', cleanPath);
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+
+    syncRouteFromLocation();
+
+    window.addEventListener('popstate', syncRouteFromLocation);
+    window.addEventListener('hashchange', syncRouteFromLocation);
+    return () => {
+      window.removeEventListener('popstate', syncRouteFromLocation);
+      window.removeEventListener('hashchange', syncRouteFromLocation);
+    };
   }, []);
 
   const handleNavigatePage = (
@@ -339,12 +353,25 @@ export function App() {
   ) => {
     setCurrentPage(page);
     setSelectedDestinationName(null);
-    if (page === 'policies') {
+
+    let cleanPath = '/';
+    if (page === 'destinations') {
+      cleanPath = '/destinations';
+    } else if (page === 'agent-studio') {
+      cleanPath = '/agent-studio';
+    } else if (page === 'policies') {
       const tab = policyTab || 'privacy';
       setActivePolicyTab(tab);
-      window.location.hash = `#${tab}`;
+      cleanPath = `/${tab}`;
     } else {
-      window.location.hash = `#${page}`;
+      cleanPath = '/';
+    }
+
+    // Clean URL without hashtags using HTML5 History API
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname !== cleanPath || window.location.hash) {
+        window.history.pushState({ page, policyTab }, '', cleanPath);
+      }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
