@@ -75,18 +75,38 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay animate-fade-in" onClick={onClose} style={{ zIndex: 1050 }}>
+    <div 
+      className="modal-overlay animate-fade-in" 
+      onClick={onClose} 
+      style={{ 
+        zIndex: 2500,
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(7, 18, 36, 0.8)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        overflowY: "auto"
+      }}
+    >
       <div 
-        className="modal-container shadow-2xl animate-scale-up" 
+        className="animate-scale-up" 
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: "460px",
-          width: "92%",
-          background: "#0c1b33",
+          maxWidth: "480px",
+          width: "100%",
+          background: "#0a192f",
           borderRadius: "20px",
-          border: "1px solid rgba(56, 189, 248, 0.25)",
+          border: "1px solid rgba(56, 189, 248, 0.3)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(2, 132, 199, 0.2)",
           overflow: "hidden",
-          color: "#ffffff"
+          color: "#ffffff",
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
         }}
       >
         {/* Header */}
@@ -96,76 +116,105 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           position: "relative"
         }}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{
                 background: "#0284c7",
                 color: "#ffffff",
                 fontWeight: 800,
-                fontSize: "12px",
+                fontSize: "11px",
                 padding: "3px 8px",
                 borderRadius: "6px",
                 letterSpacing: "0.5px"
               }}>
                 RAZORPAY LIVE
               </span>
-              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#34d399", display: "flex", alignItems: "center", gap: "4px" }}>
                 <CheckCircle2 size={13} /> Live Payment Gateway
               </span>
             </div>
             <button 
               onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors p-1"
+              style={{
+                color: "#94a3b8",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "none",
+                borderRadius: "8px",
+                padding: "6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
               aria-label="Close"
             >
               <X size={18} />
             </button>
           </div>
 
-          <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#ffffff", margin: "6px 0 4px 0", display: "flex", alignItems: "center", gap: "8px" }}>
             <span>Unlock Itinerary Blueprint</span>
-            <Sparkles size={16} className="text-amber-400" />
+            <Sparkles size={16} style={{ color: "#fbbf24" }} />
           </h3>
-          <p className="text-xs text-slate-300 mt-1">
+          <p style={{ fontSize: "12px", color: "#cbd5e1", margin: 0, lineHeight: 1.4 }}>
             Complete payment via Google Pay (GPay) or Razorpay to instantly view, unlock, and download your comprehensive PDF itinerary.
           </p>
         </div>
 
         {/* Selected Package Summary */}
         <div style={{
-          padding: "14px 20px",
+          padding: "14px 24px",
           background: "rgba(15, 39, 74, 0.6)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.06)"
+          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
         }}>
-          <div className="flex items-center justify-between">
-            <div className="pr-3">
-              <span className="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Selected Itinerary</span>
-              <div className="text-sm font-semibold text-slate-100 line-clamp-1">{itinerary.title}</div>
-              <div className="text-xs text-slate-400">{itinerary.destination} • {itinerary.durationDays}D/{itinerary.durationNights}N Complete Plan</div>
+          <div style={{ paddingRight: "12px" }}>
+            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#38bdf8", fontWeight: 700, display: "block" }}>
+              Selected Itinerary
+            </span>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "#f1f5f9", marginTop: "2px" }}>
+              {itinerary.title}
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-xs text-slate-400 line-through">₹499</div>
-              <div className="text-xl font-extrabold text-emerald-400">₹99.00</div>
-              <div className="text-[10px] text-emerald-300">All Taxes Incl.</div>
+            <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+              {itinerary.destination} • {itinerary.durationDays}D/{itinerary.durationNights}N Complete Plan
             </div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: "11px", color: "#94a3b8", textDecoration: "line-through" }}>₹499</div>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: "#34d399", lineHeight: 1.1 }}>₹99.00</div>
+            <div style={{ fontSize: "10px", color: "#6ee7b7", marginTop: "2px" }}>All Taxes Incl.</div>
           </div>
         </div>
 
         {/* Form Body */}
-        <div className="p-6">
+        <div style={{ padding: "20px 24px" }}>
           {errorMessage && (
-            <div className="mb-4 p-3 bg-rose-950/80 border border-rose-500/40 rounded-xl text-rose-200 text-xs flex items-center gap-2 animate-fade-in">
-              <AlertCircle size={15} className="shrink-0 text-rose-400" />
+            <div style={{
+              marginBottom: "16px",
+              padding: "10px 14px",
+              background: "rgba(136, 19, 55, 0.4)",
+              border: "1px solid rgba(244, 63, 94, 0.5)",
+              borderRadius: "10px",
+              color: "#fecdd3",
+              fontSize: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <AlertCircle size={15} style={{ flexShrink: 0, color: "#fb7185" }} />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                <User size={13} className="text-sky-400" />
-                <span>Full Name <span className="text-rose-400">*</span></span>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#cbd5e1", marginBottom: "6px" }}>
+                <User size={13} style={{ color: "#38bdf8" }} />
+                <span>Full Name <span style={{ color: "#f87171" }}>*</span></span>
               </label>
               <input
                 type="text"
@@ -173,19 +222,41 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
                 onChange={(e) => { setName(e.target.value); setErrorMessage(""); }}
                 placeholder="e.g. Rahul Sharma"
                 required
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 14px",
+                  background: "#071326",
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  color: "#ffffff",
+                  outline: "none",
+                  transition: "border-color 0.2s"
+                }}
               />
             </div>
 
             {/* Mobile & Email 2-col */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                  <Smartphone size={13} className="text-sky-400" />
-                  <span>Phone Number <span className="text-rose-400">*</span></span>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#cbd5e1", marginBottom: "6px" }}>
+                  <Smartphone size={13} style={{ color: "#38bdf8" }} />
+                  <span>Phone Number <span style={{ color: "#f87171" }}>*</span></span>
                 </label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-2.5 bg-slate-800 border border-r-0 border-slate-700 rounded-l-xl text-xs text-slate-300 font-medium">
+                <div style={{ display: "flex", width: "100%", boxSizing: "border-box" }}>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "0 10px",
+                    background: "#0e223d",
+                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    borderRight: "none",
+                    borderRadius: "10px 0 0 10px",
+                    fontSize: "12px",
+                    color: "#94a3b8",
+                    fontWeight: 600
+                  }}>
                     +91
                   </span>
                   <input
@@ -198,15 +269,25 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
                     placeholder="9876543210"
                     maxLength={10}
                     required
-                    className="w-full px-3 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-r-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 12px",
+                      background: "#071326",
+                      border: "1px solid rgba(56, 189, 248, 0.3)",
+                      borderRadius: "0 10px 10px 0",
+                      fontSize: "13px",
+                      color: "#ffffff",
+                      outline: "none"
+                    }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                  <Mail size={13} className="text-sky-400" />
-                  <span>Gmail / Email <span className="text-rose-400">*</span></span>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#cbd5e1", marginBottom: "6px" }}>
+                  <Mail size={13} style={{ color: "#38bdf8" }} />
+                  <span>Gmail / Email <span style={{ color: "#f87171" }}>*</span></span>
                 </label>
                 <input
                   type="email"
@@ -214,34 +295,62 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({
                   onChange={(e) => { setEmail(e.target.value); setErrorMessage(""); }}
                   placeholder="yourname@gmail.com"
                   required
-                  className="w-full px-3 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-xl text-sm text-white placeholder-slate-500 outline-none transition-all"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "10px 12px",
+                    background: "#071326",
+                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    color: "#ffffff",
+                    outline: "none"
+                  }}
                 />
               </div>
             </div>
 
             {/* Supported Payment Logos Tag */}
-            <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", paddingTop: "2px" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ display: "inline-block", width: "7px", height: "7px", borderRadius: "50%", background: "#34d399" }}></span>
                 GPay, PhonePe, Paytm, Cards & NetBanking
               </span>
-              <span className="text-slate-400 font-medium">Auto-Capture</span>
+              <span style={{ color: "#38bdf8", fontWeight: 600 }}>Auto-Capture</span>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isProcessing}
-              className="mt-2 w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-900/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              style={{
+                marginTop: "6px",
+                width: "100%",
+                padding: "13px 18px",
+                background: "linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%)",
+                border: "none",
+                borderRadius: "12px",
+                color: "#ffffff",
+                fontWeight: 700,
+                fontSize: "14px",
+                boxShadow: "0 6px 20px rgba(2, 132, 199, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                cursor: isProcessing ? "not-allowed" : "pointer",
+                opacity: isProcessing ? 0.7 : 1,
+                transition: "all 0.2s"
+              }}
             >
               <Lock size={15} />
               <span>{isProcessing ? "Connecting to Razorpay..." : "Proceed to Pay ₹99 via Razorpay / GPay"}</span>
-              <span className="text-sky-200">→</span>
+              <span style={{ color: "#93c5fd", fontWeight: 800 }}>→</span>
             </button>
 
             {/* Security Guarantee Strip */}
-            <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-              <ShieldCheck size={14} className="text-emerald-400" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: "#94a3b8", paddingTop: "4px" }}>
+              <ShieldCheck size={14} style={{ color: "#34d399" }} />
               <span>Official Razorpay 256-Bit SSL • Instant PDF Delivered to Gmail</span>
             </div>
           </form>

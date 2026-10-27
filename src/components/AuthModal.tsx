@@ -27,14 +27,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const isAgent = initialRole === 'agent';
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
 
-  // Sync mode and reset errors when opened or initial props change
+  // Clear all form input states
+  const resetAllFields = () => {
+    setName('');
+    setEmail('');
+    setMobile('');
+    setPassword('');
+    setSameAsMobile(true);
+    setShowCustomerPassword(false);
+    setCustomerError(null);
+    setAgentError(null);
+    setAgentIdentifier('');
+    setAgentPassword('');
+    setShowAgentPassword(false);
+    setAgentAgencyName('');
+    setAgentFounderName('');
+    setAgentEmail('');
+    setAgentMobile('');
+    setAgentGstin('');
+    setAgentCity('');
+  };
+
+  // Sync mode and keep ALL fields completely EMPTY whenever user tries to login or modal opens
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
-      setCustomerError(null);
-      setAgentError(null);
+      resetAllFields();
     }
   }, [isOpen, initialMode, initialRole]);
+
+  const handleModalClose = () => {
+    resetAllFields();
+    onClose();
+  };
 
   // Customer Form State
   const [name, setName] = useState('');
@@ -287,7 +312,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
 
   return (
-    <div className="modal-overlay animate-fade-in" onClick={onClose}>
+    <div className="modal-overlay animate-fade-in" onClick={handleModalClose}>
       <div 
         className="auth-modal-v3 animate-scale-up" 
         onClick={(e) => e.stopPropagation()}
@@ -295,7 +320,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Close Button */}
         <button 
           className="auth-v3-close-btn" 
-          onClick={onClose} 
+          onClick={handleModalClose} 
           aria-label="Close"
         >
           <X size={18} />
@@ -347,20 +372,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button 
                 type="button"
                 className={`auth-switch-btn ${mode === 'login' ? 'active' : ''}`}
-                onClick={() => setMode('login')}
+                onClick={() => {
+                  setMode('login');
+                  resetAllFields();
+                }}
               >
                 Sign In to Account
               </button>
               <button 
                 type="button"
                 className={`auth-switch-btn ${mode === 'signup' ? 'active' : ''}`}
-                onClick={() => setMode('signup')}
+                onClick={() => {
+                  setMode('signup');
+                  resetAllFields();
+                }}
               >
                 Create New Account
               </button>
             </div>
-
-
 
             {/* Error Notification */}
             {customerError && (
@@ -371,7 +400,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
 
             {/* Customer Credentials Form */}
-            <form onSubmit={handleCustomerSubmit} className="auth-v3-form">
+            <form onSubmit={handleCustomerSubmit} className="auth-v3-form" autoComplete="off">
               {mode === 'signup' && (
                 <div className="auth-v3-field-group">
                   <div className="auth-v3-label-row">
@@ -385,6 +414,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onChange={(e) => setName(e.target.value)} 
                       placeholder="Rahul Sharma"
                       className="auth-v3-input customer-focus"
+                      autoComplete="off"
                       required
                     />
                   </div>
@@ -403,6 +433,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setEmail(e.target.value)} 
                     placeholder="name@example.com"
                     className="auth-v3-input customer-focus"
+                    autoComplete="off"
+                    name="v3_customer_login_email"
                     required
                   />
                 </div>
@@ -422,6 +454,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setMobile(e.target.value)} 
                         placeholder="+91 98765 43210"
                         className="auth-v3-input customer-focus"
+                        autoComplete="off"
                         required
                       />
                     </div>
@@ -460,6 +493,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setPassword(e.target.value)} 
                     placeholder="••••••••"
                     className="auth-v3-input customer-focus"
+                    autoComplete="new-password"
+                    name="v3_customer_login_password"
                     required
                   />
                   <button
@@ -530,7 +565,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`auth-switch-btn ${mode === 'login' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('login');
-                  setAgentError(null);
+                  resetAllFields();
                 }}
               >
                 Sign In
@@ -540,7 +575,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`auth-switch-btn ${mode === 'signup' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('signup');
-                  setAgentError(null);
+                  resetAllFields();
                 }}
               >
                 Create Agent Account
@@ -556,7 +591,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
 
             {/* Travel Agent Form */}
-            <form onSubmit={handleAgentSubmit} className="auth-v3-form">
+            <form onSubmit={handleAgentSubmit} className="auth-v3-form" autoComplete="off">
               {mode === 'signup' ? (
                 <>
                   <div className="auth-v3-field-group">
@@ -571,6 +606,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentAgencyName(e.target.value)} 
                         placeholder="e.g. Odyssey Travels Pvt Ltd"
                         className="auth-v3-input"
+                        autoComplete="off"
                         required
                       />
                     </div>
@@ -588,6 +624,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentFounderName(e.target.value)} 
                         placeholder="e.g. Rajesh Khurana"
                         className="auth-v3-input"
+                        autoComplete="off"
                         required
                       />
                     </div>
@@ -605,6 +642,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentEmail(e.target.value)} 
                         placeholder="contact@agency.com"
                         className="auth-v3-input"
+                        autoComplete="off"
                         required
                       />
                     </div>
@@ -623,6 +661,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           onChange={(e) => setAgentMobile(e.target.value)} 
                           placeholder="+91 98765 43210"
                           className="auth-v3-input"
+                          autoComplete="off"
                           required
                         />
                       </div>
@@ -640,6 +679,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           onChange={(e) => setAgentGstin(e.target.value.toUpperCase())} 
                           placeholder="27AABCU9603R1ZM"
                           className="auth-v3-input uppercase"
+                          autoComplete="off"
                           required
                         />
                       </div>
@@ -658,6 +698,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentCity(e.target.value)} 
                         placeholder="e.g. Mumbai, New Delhi"
                         className="auth-v3-input"
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -674,6 +715,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentPassword(e.target.value)} 
                         placeholder="••••••••"
                         className="auth-v3-input"
+                        autoComplete="new-password"
+                        name="v3_agent_reg_password"
                         required
                       />
                       <button
@@ -716,6 +759,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentIdentifier(e.target.value)} 
                         placeholder="e.g. aditya@royalodyssey.com or V3G-374380"
                         className="auth-v3-input"
+                        autoComplete="off"
+                        name="v3_agent_login_identifier"
                         required
                       />
                     </div>
@@ -740,6 +785,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={(e) => setAgentPassword(e.target.value)} 
                         placeholder="••••••••"
                         className="auth-v3-input"
+                        autoComplete="new-password"
+                        name="v3_agent_login_password"
                         required
                       />
                       <button

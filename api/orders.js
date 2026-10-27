@@ -178,6 +178,14 @@ export default async function handler(req, res) {
         'UPDATE orders SET status = "PAID", razorpay_payment_id = ? WHERE order_id = ?',
         [razorpayPaymentId, orderId]
       );
+      if (paymentDetails?.email || paymentDetails?.contact) {
+        try {
+          await pool.query(
+            'UPDATE orders SET customer_email = IF(customer_email = "" OR customer_email IS NULL, ?, customer_email), customer_mobile = IF(customer_mobile = "" OR customer_mobile IS NULL, ?, customer_mobile) WHERE order_id = ?',
+            [paymentDetails.email || '', paymentDetails.contact || '', orderId]
+          );
+        } catch (e) {}
+      }
       try {
         await pool.query(
           'UPDATE payments SET payment_status = "CONFIRMED", razorpay_payment_id = ? WHERE order_id = ?',
@@ -193,7 +201,9 @@ export default async function handler(req, res) {
         orderId,
         razorpayPaymentId,
         status: "PAID",
-        method: paymentDetails?.method || "UPI / Razorpay"
+        method: paymentDetails?.method || "UPI / Razorpay",
+        customerEmail: paymentDetails?.email || "",
+        customerContact: paymentDetails?.contact || ""
       });
     } catch (err) {
       console.error("Error verifying Razorpay payment:", err);
@@ -213,6 +223,10 @@ export default async function handler(req, res) {
 
       if (!orderId || !itineraryId) {
         return res.status(400).json({ error: 'Missing required fields: orderId, itineraryId' });
+      }
+
+      if (!customerEmail || !customerEmail.includes('@')) {
+        return res.status(401).json({ error: 'Authentication required: User must be logged in with a valid account to initiate payment.' });
       }
 
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');

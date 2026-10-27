@@ -277,6 +277,7 @@ export function App() {
   const [checkoutItinerary, setCheckoutItinerary] = useState<Itinerary | null>(null);
   const [gatewayItinerary, setGatewayItinerary] = useState<Itinerary | null>(null);
   const [fulfilledOrder, setFulfilledOrder] = useState<{ itinerary: Itinerary; order: OrderRecord } | null>(null);
+  const [pendingCheckoutItinerary, setPendingCheckoutItinerary] = useState<Itinerary | null>(null);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'trips' | 'saved' | 'orders' | 'profile'>('trips');
   const [agentModalOpen, setAgentModalOpen] = useState(false);
@@ -535,7 +536,7 @@ export function App() {
     }
   };
 
-  const handleStartCheckout = (itinerary: Itinerary) => {
+  const handleStartCheckout = (itinerary: Itinerary, overrideUser?: UserProfile) => {
     // If it's already paid, do NOT add or open Razorpay!
     if (isPurchased(itinerary.id)) {
       showToast('✓ This itinerary is already unlocked and paid!');
@@ -543,31 +544,38 @@ export function App() {
       return;
     }
 
-    // Direct checkout: If user already has email, launch official Razorpay standard popup directly!
-    if (user.isLoggedIn && user.email && user.email.includes('@')) {
-      openRazorpayCheckout({
-        itinerary,
-        amount: 99.00,
-        customerName: user.fullName || 'Valued Traveler',
-        customerEmail: user.email,
-        customerMobile: user.mobile || '',
-        onSuccess: (paymentId, orderId, verifiedCustomer) => {
-          handlePaymentSuccess(paymentId, orderId, itinerary, verifiedCustomer?.email || user.email, {
-            name: verifiedCustomer?.name || user.fullName || 'Valued Traveler',
-            phone: verifiedCustomer?.phone || user.mobile || '',
-            email: verifiedCustomer?.email || user.email,
-            address: ''
-          });
-        },
-        onFailure: (err) => {
-          showToast(`Payment failed: ${err?.description || err?.message || 'Please try again'}`);
-        }
-      });
+    const currentUser = overrideUser || user;
+
+    // Strict Enforcement: Without login, no payment can be done
+    if (!currentUser.isLoggedIn || !currentUser.email) {
+      showToast('🔒 Please log in or create an account to proceed to payment.');
+      setPendingCheckoutItinerary(itinerary);
+      handleOpenAuth('login', 'customer');
       return;
     }
 
-    // Guest traveler: Show sleek direct checkout modal to enter Name & Gmail for PDF delivery, then launch Razorpay
-    setCheckoutItinerary(itinerary);
+    // Authenticated traveler: Launch official live Razorpay checkout directly!
+    openRazorpayCheckout({
+      itinerary,
+      amount: 99.00,
+      customerName: currentUser.fullName || 'Valued Traveler',
+      customerEmail: currentUser.email,
+      customerMobile: currentUser.mobile || '',
+      onSuccess: (paymentId, orderId, verifiedCustomer) => {
+        handlePaymentSuccess(paymentId, orderId, itinerary, verifiedCustomer?.email || currentUser.email, {
+          name: verifiedCustomer?.name || currentUser.fullName || 'Valued Traveler',
+          phone: verifiedCustomer?.phone || currentUser.mobile || '',
+          email: verifiedCustomer?.email || currentUser.email,
+          address: ''
+        });
+      },
+      onFailure: (err) => {
+        console.warn('Razorpay checkout issue:', err);
+        if (err?.description || err?.message) {
+          showToast(`Payment note: ${err.description || err.message}`);
+        }
+      }
+    });
   };
 
   const handlePaymentSuccess = (
@@ -1091,6 +1099,15 @@ export function App() {
             handleNavigatePage('agent-studio');
           } else {
             showToast(`Welcome back, ${profile.fullName || 'Traveler'}!`);
+          }
+
+          // If traveler was trying to buy an itinerary before logging in, proceed to live checkout now!
+          if (pendingCheckoutItinerary) {
+            const it = pendingCheckoutItinerary;
+            setPendingCheckoutItinerary(null);
+            setTimeout(() => {
+              handleStartCheckout(it, cleanUser);
+            }, 300);
           }
         }}
       />

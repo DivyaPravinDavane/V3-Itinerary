@@ -222,6 +222,10 @@ app.post('/api/orders/initiate', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: orderId, itineraryId' });
     }
 
+    if (!customerEmail || !customerEmail.includes('@')) {
+      return res.status(401).json({ error: 'Authentication required: User must be logged in with a valid account to initiate payment.' });
+    }
+
     const initiatedOrder = await initiateOrder({
       orderId, itineraryId,
       itineraryTitle: itineraryTitle || 'Complete Travel Blueprint',
@@ -384,7 +388,10 @@ app.post("/api/orders/verify-payment", async (req, res) => {
     }
 
     // Successfully verified! Update order in MySQL to PAID
-    const updatedOrder = await updateOrderStatus(orderId, "PAID", { razorpayPaymentId });
+    const updatePayload = { razorpayPaymentId };
+    if (paymentDetails?.email) updatePayload.customerEmail = paymentDetails.email;
+    if (paymentDetails?.contact) updatePayload.customerMobile = paymentDetails.contact;
+    const updatedOrder = await updateOrderStatus(orderId, "PAID", updatePayload);
     const stats = await getRealtimeStats();
     broadcastRealtimeEvent("order_status_updated", { order: updatedOrder, stats });
 
@@ -397,6 +404,8 @@ app.post("/api/orders/verify-payment", async (req, res) => {
       razorpayPaymentId,
       status: "PAID",
       method: paymentDetails?.method || "UPI / Razorpay",
+      customerEmail: paymentDetails?.email || "",
+      customerContact: paymentDetails?.contact || "",
       order: updatedOrder
     });
   } catch (error) {

@@ -63,10 +63,17 @@ export const openRazorpayCheckout = async ({
     throw testErr;
   }
 
+  const cleanEmail = (customerEmail || "").trim();
+  // Strict check: Without login there should be no payment done
+  if (!cleanEmail || !cleanEmail.includes("@")) {
+    const authErr = new Error("Authentication required: Please log in to complete payment and unlock this itinerary.");
+    if (onFailure) onFailure(authErr);
+    throw authErr;
+  }
+
   const generatedOrderId = `V3I-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
   const cleanPhone = (customerMobile || "").replace(/[^0-9]/g, "").slice(-10);
   const cleanName = (customerName || "").trim() || "Valued Traveler";
-  const cleanEmail = (customerEmail || "").trim();
 
   // 1. Immediately log INITIATED in MySQL
   try {
