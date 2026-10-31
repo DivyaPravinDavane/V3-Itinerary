@@ -25,6 +25,7 @@ import {
   Star,
   Lock,
   ArrowRight,
+  ArrowLeft,
   Loader2,
   AlertCircle,
   Trash2
@@ -32,9 +33,12 @@ import {
 import { registerAgentInBackend, uploadDocumentToBackend } from '../utils/api';
 
 interface TravelAgentOnboardingPageProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  isStandalonePage?: boolean;
+  onClose?: () => void;
   onOpenLogin?: () => void;
+  onNavigateHome?: () => void;
+  onNavigateStudio?: () => void;
 }
 
 const INDIAN_CITIES = [
@@ -52,9 +56,12 @@ const INDIAN_STATES = [
 ];
 
 export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps> = ({
-  isOpen,
+  isOpen = true,
+  isStandalonePage = false,
   onClose,
-  onOpenLogin
+  onOpenLogin,
+  onNavigateHome,
+  onNavigateStudio
 }) => {
   // Step 1: Basic Details
   const [agencyName, setAgencyName] = useState('');
@@ -103,7 +110,7 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
   const proofInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isStandalonePage) return null;
 
   // Toggle Specialisation
   const toggleSpecialisation = (spec: string) => {
@@ -247,12 +254,16 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
   };
 
   return (
-    <div className="agent-onboarding-overlay animate-fade-in">
+    <div className={isStandalonePage ? "agent-onboarding-standalone-page animate-fade-in" : "agent-onboarding-overlay animate-fade-in"}>
       <div className="agent-onboarding-container">
         {/* Top Header Bar / Navigation Integration */}
         <div className="agent-onboarding-topbar">
           <div className="flex items-center gap-3">
-            <div className="agent-brand-pill">
+            <div 
+              className="agent-brand-pill cursor-pointer" 
+              onClick={onNavigateHome || onClose}
+              title="Return to V3 Itinerary Marketplace"
+            >
               <span className="text-orange-500 font-extrabold text-lg">V3</span>
               <span className="text-primary-navy font-bold text-sm">itinerary</span>
               <span className="agent-tag-badge">Partner Portal</span>
@@ -261,7 +272,7 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
               <button
                 type="button"
                 onClick={() => {
-                  onClose();
+                  onClose?.();
                   onOpenLogin();
                 }}
                 className="agent-login-shortcut-btn"
@@ -272,13 +283,22 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
             )}
           </div>
           <button 
-            className="agent-close-btn"
-            onClick={onClose}
-            aria-label="Close and return to marketplace"
+            className="agent-close-btn flex items-center gap-1.5"
+            onClick={onNavigateHome || onClose}
+            aria-label={isStandalonePage ? "Back to Marketplace" : "Close and return to marketplace"}
             title="Return to marketplace"
           >
-            <X size={20} />
-            <span className="hidden-mobile">Close</span>
+            {isStandalonePage ? (
+              <>
+                <ArrowLeft size={16} />
+                <span>Back to Marketplace</span>
+              </>
+            ) : (
+              <>
+                <X size={20} />
+                <span className="hidden-mobile">Close</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -362,8 +382,19 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
                 </ol>
               </div>
 
-              <div className="agent-success-actions">
-                <button className="btn-primary-gradient" onClick={onClose}>
+              <div className="agent-success-actions flex flex-wrap gap-3 justify-center">
+                {onOpenLogin && (
+                  <button 
+                    className="btn-primary-gradient" 
+                    onClick={() => {
+                      if (onNavigateStudio) onNavigateStudio();
+                      else if (onOpenLogin) onOpenLogin();
+                    }}
+                  >
+                    Go to Agent Login & Dashboard
+                  </button>
+                )}
+                <button className="btn-secondary-outline" onClick={onNavigateHome || onClose}>
                   Return to Marketplace
                 </button>
               </div>

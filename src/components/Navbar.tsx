@@ -8,7 +8,7 @@ import type { UserProfile } from '../types';
 
 interface NavbarProps {
   user: UserProfile;
-  currentPage?: 'home' | 'destinations' | 'agent-studio' | 'policies';
+  currentPage?: 'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register';
   onOpenAuth: (mode?: 'login' | 'signup', role?: 'customer' | 'admin' | 'agent') => void;
   onLogout: () => void;
   onOpenDashboard: (tab: 'trips' | 'saved' | 'orders' | 'profile') => void;
@@ -16,7 +16,7 @@ interface NavbarProps {
   onOpenAgentDashboard?: () => void;
   onOpenAgentModal: () => void;
   onScrollToSection: (sectionId: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies', tab?: any) => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register', tab?: any) => void;
   isAgentPageOpen?: boolean;
 }
 

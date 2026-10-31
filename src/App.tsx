@@ -300,7 +300,7 @@ export function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Helper to extract clean page and policy tab from browser URL (path or legacy hash)
-  const getRouteFromUrl = (): { page: 'home' | 'destinations' | 'agent-studio' | 'policies'; policyTab?: PolicyTabKey } => {
+  const getRouteFromUrl = (): { page: 'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register'; policyTab?: PolicyTabKey } => {
     if (typeof window === 'undefined') return { page: 'home' };
     const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
     const hash = window.location.hash.replace(/^#+/, '').toLowerCase();
@@ -312,6 +312,16 @@ export function App() {
     if (segment === 'agent-studio' || segment === 'agentstudio' || segment === 'agent') {
       return { page: 'agent-studio' };
     }
+    if (
+      segment === 'agent-register' || 
+      segment === 'agent-registration' || 
+      segment === 'travel-agent-registration' || 
+      segment === 'partner-register' || 
+      segment === 'register-agent' || 
+      segment === 'partner'
+    ) {
+      return { page: 'agent-register' };
+    }
     if (['privacy', 'terms', 'refund', 'gst'].includes(segment)) {
       return { page: 'policies', policyTab: segment as PolicyTabKey };
     }
@@ -321,8 +331,8 @@ export function App() {
     return { page: 'home' };
   };
 
-  // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio' | 'policies')
-  const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio' | 'policies'>(() => {
+  // Dedicated Page Routing ('home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register')
+  const [currentPage, setCurrentPage] = useState<'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register'>(() => {
     return getRouteFromUrl().page;
   });
 
@@ -360,7 +370,7 @@ export function App() {
   }, []);
 
   const handleNavigatePage = (
-    page: 'home' | 'destinations' | 'agent-studio' | 'policies',
+    page: 'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register',
     policyTab?: PolicyTabKey
   ) => {
     setCurrentPage(page);
@@ -371,6 +381,8 @@ export function App() {
       cleanPath = '/destinations';
     } else if (page === 'agent-studio') {
       cleanPath = '/agent-studio';
+    } else if (page === 'agent-register') {
+      cleanPath = '/agent-register';
     } else if (page === 'policies') {
       const tab = policyTab || 'privacy';
       setActivePolicyTab(tab);
@@ -841,9 +853,9 @@ export function App() {
         }}
         onOpenAdminDashboard={() => setAdminDashboardOpen(true)}
         onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
-        onOpenAgentModal={() => setAgentModalOpen(true)}
+        onOpenAgentModal={() => handleNavigatePage('agent-register')}
         onScrollToSection={scrollToSection}
-        isAgentPageOpen={agentModalOpen}
+        isAgentPageOpen={currentPage === 'agent-register' || agentModalOpen}
       />
 
       {/* Main Page Body — destination packages page, dedicated Destinations page, or Home */}
@@ -893,7 +905,7 @@ export function App() {
 
           {/* Footer */}
           <Footer 
-            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentModal={() => handleNavigatePage('agent-register')}
             onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
@@ -916,13 +928,13 @@ export function App() {
             onClose={() => handleNavigatePage('home')}
             onSelectItinerary={(it) => setSelectedItinerary(it)}
             onDataRefresh={loadData}
-            onOpenAgentOnboarding={() => setAgentModalOpen(true)}
+            onOpenAgentOnboarding={() => handleNavigatePage('agent-register')}
             onNavigateToDestinations={() => handleNavigatePage('destinations')}
           />
 
           {/* Footer */}
           <Footer 
-            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentModal={() => handleNavigatePage('agent-register')}
             onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
@@ -944,7 +956,32 @@ export function App() {
 
           {/* Footer */}
           <Footer 
-            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentModal={() => handleNavigatePage('agent-register')}
+            onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
+            onScrollToSection={scrollToSection}
+            onSelectDestination={(name) => {
+              setSelectedDestinationName(name);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigatePage={handleNavigatePage}
+            onOpenAgentDashboard={() => handleNavigatePage('agent-studio')}
+            isAgent={user.role === 'agent'}
+          />
+        </>
+      ) : currentPage === 'agent-register' ? (
+        <>
+          <TravelAgentOnboardingPage 
+            isOpen={true}
+            isStandalonePage={true}
+            onClose={() => handleNavigatePage('home')}
+            onNavigateHome={() => handleNavigatePage('home')}
+            onOpenLogin={() => handleOpenAuth('login', 'agent')}
+            onNavigateStudio={() => handleNavigatePage('agent-studio')}
+          />
+
+          {/* Footer */}
+          <Footer 
+            onOpenAgentModal={() => handleNavigatePage('agent-register')}
             onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
@@ -994,7 +1031,7 @@ export function App() {
 
             {/* 3. Middle Section: How It Works + Agent Promo + Stats */}
             <MiddleSection 
-              onOpenAgentModal={() => setAgentModalOpen(true)}
+              onOpenAgentModal={() => handleNavigatePage('agent-register')}
               onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             />
 
@@ -1004,7 +1041,7 @@ export function App() {
 
           {/* Footer */}
           <Footer 
-            onOpenAgentModal={() => setAgentModalOpen(true)}
+            onOpenAgentModal={() => handleNavigatePage('agent-register')}
             onOpenAgentLogin={() => handleOpenAuth('login', 'agent')}
             onScrollToSection={scrollToSection}
             onSelectDestination={(name) => {
@@ -1115,7 +1152,7 @@ export function App() {
         onClose={() => setAuthModalOpen(false)}
         onOpenAgentOnboarding={() => {
           setAuthModalOpen(false);
-          setAgentModalOpen(true);
+          handleNavigatePage('agent-register');
         }}
         onLoginSuccess={(profile) => {
           localStorage.setItem('v3_auth_active', 'true');

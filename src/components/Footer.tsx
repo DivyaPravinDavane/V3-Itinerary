@@ -7,7 +7,7 @@ interface FooterProps {
   onOpenAgentLogin?: () => void;
   onScrollToSection: (sectionId: string) => void;
   onSelectDestination: (name: string) => void;
-  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies', tab?: PolicyTabKey) => void;
+  onNavigatePage?: (page: 'home' | 'destinations' | 'agent-studio' | 'policies' | 'agent-register', tab?: PolicyTabKey) => void;
   onOpenAgentDashboard?: () => void;
   isAgent?: boolean;
 }
