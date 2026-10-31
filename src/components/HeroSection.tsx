@@ -80,10 +80,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onSearch, activeFilter
 
   const durationOptions = [
     { label: 'Any Duration', value: '' },
-    { label: '1-3 Days (Weekend)', value: '1-3' },
-    { label: '4-6 Days (Short Trip)', value: '4-6' },
-    { label: '7-10 Days (Standard)', value: '7-10' },
-    { label: '10+ Days (Extended)', value: '10+' }
+    { label: '1–3 (Weekend)', value: '1-3' },
+    { label: '4–6 (Short Trip)', value: '4-6' },
+    { label: '7–10 (Standard)', value: '7-10' },
+    { label: '10+ (Extended)', value: '10+' }
   ];
 
   const travellerOptions = [

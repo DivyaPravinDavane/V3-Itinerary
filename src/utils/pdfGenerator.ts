@@ -68,10 +68,10 @@ function buildItineraryDoc(itinerary: Itinerary, order: OrderRecord, customerNam
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Est. Ground Budget:', col3, y + 6);
+  doc.text('Itinerary Fee:', col3, y + 6);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(217, 119, 6);
-  doc.text(`₹${itinerary.estimatedTripCost.toLocaleString('en-IN')}`, col3, y + 13);
+  doc.setTextColor(5, 150, 105);
+  doc.text('₹99 Paid', col3, y + 13);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);

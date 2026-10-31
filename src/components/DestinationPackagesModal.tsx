@@ -173,9 +173,9 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
               className="mmt-select-input"
             >
               <option value="all">All Durations (3D to 7D+)</option>
-              <option value="short">1 - 3 Days (Weekend Break)</option>
-              <option value="medium">4 - 6 Days (Standard Tour)</option>
-              <option value="long">7+ Days (Complete Explorer)</option>
+              <option value="short">1–3 (Weekend Break)</option>
+              <option value="medium">4–6 (Standard Tour)</option>
+              <option value="long">7+ (Complete Explorer)</option>
             </select>
           </div>
 
@@ -449,22 +449,13 @@ export const DestinationPackagesModal: React.FC<DestinationPackagesModalProps> =
                                 </span>
                               </div>
                             ) : (
-                              <>
-                                <span className="mmt-orig-price">From ₹1,804</span>
-                                <div className="mmt-active-price">
-                                  <span className="curr">₹</span>
-                                  <span className="amt">99</span>
-                                  <span className="unit">per package</span>
-                                </div>
-                              </>
+                              <div className="mmt-active-price">
+                                <span className="curr">₹</span>
+                                <span className="amt">99</span>
+                                <span className="unit">itinerary access</span>
+                              </div>
                             )}
                           </div>
-
-                          {!hasPurchased && (
-                            <div className="mmt-savings-tag">
-                              You save 42%
-                            </div>
-                          )}
                         </div>
 
                         <div className="mmt-actions-row">

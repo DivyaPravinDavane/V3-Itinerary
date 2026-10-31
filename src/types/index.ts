@@ -69,6 +69,22 @@ export interface Itinerary {
   pdfUrl?: string;
   pdfName?: string;
   pdfSize?: number;
+  reviews?: ItineraryReview[];
+}
+
+export interface ItineraryReview {
+  id: string;
+  itineraryId: string;
+  userName: string;
+  userLocation?: string;
+  userAvatar?: string;
+  rating: number; // 1 to 5
+  title: string;
+  comment: string;
+  date: string;
+  travelerType?: 'Solo' | 'Couple' | 'Family' | 'Group' | 'Friends';
+  verifiedPurchase?: boolean;
+  helpfulCount?: number;
 }
 
 export interface OrderRecord {

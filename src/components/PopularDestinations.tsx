@@ -62,10 +62,10 @@ export const PopularDestinations: React.FC<PopularDestinationsProps> = ({
 
   const getDurationLabel = (val: string) => {
     switch (val) {
-      case '1-3': return '1-3 Days (Weekend)';
-      case '4-6': return '4-6 Days (Short Trip)';
-      case '7-10': return '7-10 Days (Standard)';
-      case '10+': return '10+ Days (Extended)';
+      case '1-3': return '1–3 (Weekend)';
+      case '4-6': return '4–6 (Short Trip)';
+      case '7-10': return '7–10 (Standard)';
+      case '10+': return '10+ (Extended)';
       default: return val;
     }
   };

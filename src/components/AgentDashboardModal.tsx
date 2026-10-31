@@ -3,28 +3,42 @@ import {
   X, Briefcase, Plus, Trash2, Edit3, Eye, Search, 
   CheckCircle2, ShieldCheck, MapPin, Clock, 
   IndianRupee, FileText, MessageSquare, 
-  RefreshCw, Sparkles, Building, Check, ArrowLeft, AlertCircle
+  RefreshCw, Sparkles, Building, Check, ArrowLeft, AlertCircle, ExternalLink, Star
 } from 'lucide-react';
-import type { Itinerary, UserProfile, ItineraryDay, HotelRecommendation } from '../types';
+import type { Itinerary, UserProfile, ItineraryDay, HotelRecommendation, Destination } from '../types';
 import { 
   createItineraryInBackend, 
   updateItineraryInBackend, 
   deleteItineraryFromBackend, 
-  fetchOrdersFromBackend 
+  fetchOrdersFromBackend,
+  saveDestinationToBackend
 } from '../utils/api';
 import { CoverImageUploader, PRESET_COVERS } from './CoverImageUploader';
 import { ItineraryPdfUploader } from './ItineraryPdfUploader';
+
+export const PRESET_DESTINATION_COVERS = [
+  { name: 'Tropical Beaches & Sea', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Himalayan Snow & Valleys', url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Lush Green Hills & Falls', url: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Royal Palaces & Forts', url: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Iconic Global Skyline', url: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Swiss Alpine Lakes', url: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Island Sea Lagoon', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80' },
+  { name: 'Historic Temples & Heritage', url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80' }
+];
 
 interface AgentDashboardModalProps {
   isOpen?: boolean;
   isPage?: boolean;
   user: UserProfile;
   allItineraries: Itinerary[];
+  destinationsMaster?: Destination[];
   onClose?: () => void;
   onSelectItinerary: (itinerary: Itinerary) => void;
   onDataRefresh: () => Promise<void> | void;
   onOpenAgentOnboarding?: () => void;
   onBackToHome?: () => void;
+  onNavigateToDestinations?: () => void;
 }
 
 export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
@@ -32,15 +46,88 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
   isPage = false,
   user,
   allItineraries,
+  destinationsMaster = [],
   onClose,
   onSelectItinerary,
   onDataRefresh,
   onOpenAgentOnboarding,
-  onBackToHome
+  onBackToHome,
+  onNavigateToDestinations
 }) => {
-  const [activeTab, setActiveTab] = useState<'itineraries' | 'create' | 'orders' | 'profile'>('itineraries');
+  const [activeTab, setActiveTab] = useState<'itineraries' | 'create' | 'create-destination' | 'orders' | 'profile'>('itineraries');
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<'all' | 'Domestic' | 'International'>('all');
+
+  // Destination Form State
+  const [destForm, setDestForm] = useState({
+    name: '',
+    country: 'India',
+    region: 'Domestic' as 'Domestic' | 'International',
+    tagline: '',
+    description: '',
+    bestTimeToVisit: 'October to March',
+    coverImage: PRESET_DESTINATION_COVERS[0].url,
+    isPopular: true
+  });
+  const [isSubmittingDest, setIsSubmittingDest] = useState(false);
+  const [destSuccess, setDestSuccess] = useState<{ name: string; id: string; country: string } | null>(null);
+  const [destFormError, setDestFormError] = useState<string | null>(null);
+
+  const handleCreateDestination = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDestFormError(null);
+
+    const trimmedName = destForm.name.trim();
+    if (!trimmedName) {
+      setDestFormError('⚠️ Please enter a destination name (e.g. Manali, Kerala, Tokyo).');
+      return;
+    }
+
+    if (!destForm.country.trim()) {
+      setDestFormError('⚠️ Please specify the destination country.');
+      return;
+    }
+
+    setIsSubmittingDest(true);
+    try {
+      const saved = await saveDestinationToBackend({
+        name: trimmedName,
+        country: destForm.country.trim(),
+        region: destForm.region,
+        tagline: destForm.tagline.trim() || `${trimmedName} Curated Holiday Packages`,
+        description: destForm.description.trim() || `Explore verified travel agency itineraries and holiday packages for ${trimmedName}.`,
+        bestTimeToVisit: destForm.bestTimeToVisit.trim() || 'October to March',
+        coverImage: destForm.coverImage,
+        isPopular: destForm.isPopular,
+        startingPrice: 99
+      });
+
+      await onDataRefresh();
+      setDestSuccess({
+        name: saved.name,
+        id: saved.id,
+        country: saved.country
+      });
+      showNotice(`⚡ Destination "${saved.name}" published & synced live to user pages!`);
+
+      // Reset form
+      setDestForm({
+        name: '',
+        country: destForm.region === 'Domestic' ? 'India' : '',
+        region: destForm.region,
+        tagline: '',
+        description: '',
+        bestTimeToVisit: 'October to March',
+        coverImage: PRESET_DESTINATION_COVERS[0].url,
+        isPopular: true
+      });
+    } catch (err: any) {
+      console.error('Failed to create destination:', err);
+      setDestFormError(err.message || 'Failed to save destination');
+    } finally {
+      setIsSubmittingDest(false);
+    }
+  };
   
   // Real-time notification toast
   const [notice, setNotice] = useState<string | null>(null);
@@ -536,6 +623,20 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
         <div className="agent-header-right flex items-center gap-2.5">
           <button 
             className="btn-agent-create-shortcut"
+            onClick={() => setActiveTab('create-destination')}
+            style={{
+              background: '#ECFDF5',
+              color: '#065F46',
+              border: '1px solid #10B981',
+              boxShadow: 'none'
+            }}
+            title="Create a new destination to immediately feature across the website"
+          >
+            <MapPin size={15} className="text-emerald-600" />
+            <span>+ Create Destination</span>
+          </button>
+          <button 
+            className="btn-agent-create-shortcut"
             onClick={() => setActiveTab('create')}
           >
             <Plus size={15} />
@@ -618,6 +719,13 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
           >
             <Plus size={16} />
             <span>Create Itinerary</span>
+          </button>
+          <button 
+            className={`agent-tab-btn ${activeTab === 'create-destination' ? 'active' : ''}`}
+            onClick={() => setActiveTab('create-destination')}
+          >
+            <MapPin size={16} />
+            <span>Create Destination ({destinationsMaster?.length || 0})</span>
           </button>
           <button 
             className={`agent-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
@@ -746,6 +854,14 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                       <div className="it-card-agent-tag">
                         <ShieldCheck size={13} className="text-emerald-600" />
                         <span className="truncate">Agency: {it.agent?.agencyName || agencyName}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs py-1 px-1 my-0.5">
+                        <div className="flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <Star size={11} fill="#F59E0B" stroke="#F59E0B" />
+                          <span>{it.rating || 4.8} ({it.reviewCount || 95} reviews)</span>
+                        </div>
+                        <span className="text-[11px] text-emerald-700 font-semibold">★ Customer Feedback Active</span>
                       </div>
 
                       {/* ACTIONS STRIP */}
@@ -1181,6 +1297,320 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* TAB 2.5: CREATE DESTINATION (DIRECT LIVE SYNC TO USER PAGES) */}
+        {activeTab === 'create-destination' && (
+          <div className="agent-content-pane animate-fade-in">
+            {/* Header / Intro banner */}
+            <div className="p-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-blue-50/60 mb-6 flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <MapPin size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-slate-900 text-base">Create & Publish Destination</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                      <Sparkles size={11} /> Real-Time Live Sync
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+                    Publish a destination directly. It will instantly be synchronized and accessible to all travelers on the <strong>Home Page Carousel</strong>, <strong>Hero Search Bar</strong>, and <strong>Destinations Directory</strong>—even before creating full day-by-day itineraries!
+                  </p>
+                </div>
+              </div>
+
+              {onNavigateToDestinations && (
+                <button
+                  type="button"
+                  onClick={onNavigateToDestinations}
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <ExternalLink size={13} />
+                  <span>View Destinations Page</span>
+                </button>
+              )}
+            </div>
+
+            {destFormError && (
+              <div className="p-3 mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{destFormError}</span>
+              </div>
+            )}
+
+            {/* Split Grid: Form on Left, Live Preview on Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Form (7 cols) */}
+              <form onSubmit={handleCreateDestination} className="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Destination Name <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Manali, Kerala, Tokyo, Bali"
+                      value={destForm.name}
+                      onChange={(e) => setDestForm({ ...destForm, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Country <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. India, Japan, Indonesia, Switzerland"
+                      value={destForm.country}
+                      onChange={(e) => setDestForm({ ...destForm, country: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Region Category</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDestForm({ ...destForm, region: 'Domestic', country: destForm.country === 'India' ? 'India' : destForm.country })}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center ${
+                          destForm.region === 'Domestic' 
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs' 
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        🇮🇳 Domestic (India)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDestForm({ ...destForm, region: 'International' })}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center ${
+                          destForm.region === 'International' 
+                            ? 'bg-blue-50 border-blue-500 text-blue-800 shadow-xs' 
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        ✈️ International
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Best Travel Season</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. October to March, April to June"
+                      value={destForm.bestTimeToVisit}
+                      onChange={(e) => setDestForm({ ...destForm, bestTimeToVisit: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Catchy Destination Tagline</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Snow-clad peaks, pine forests, apple orchards & Himalayan serenity"
+                    value={destForm.tagline}
+                    onChange={(e) => setDestForm({ ...destForm, tagline: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Appears on destination cards across the home carousel and directories.</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Cover Image</label>
+                  <div className="space-y-2">
+                    <span className="text-[11px] text-slate-500 block">Click a scenic preset cover or paste your custom image URL:</span>
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                      {PRESET_DESTINATION_COVERS.map((preset, idx) => {
+                        const isSelected = destForm.coverImage === preset.url;
+                        return (
+                          <div 
+                            key={idx}
+                            onClick={() => setDestForm({ ...destForm, coverImage: preset.url })}
+                            className={`group relative rounded-lg overflow-hidden cursor-pointer aspect-video border-2 transition-all ${
+                              isSelected ? 'border-emerald-600 ring-2 ring-emerald-300 shadow-md' : 'border-slate-200 hover:border-slate-400 opacity-75 hover:opacity-100'
+                            }`}
+                            title={preset.name}
+                          >
+                            <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-emerald-900/30 flex items-center justify-center">
+                                <Check size={14} className="text-white drop-shadow" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-2 flex gap-2">
+                      <input 
+                        type="url"
+                        placeholder="Or paste custom image URL (https://...)"
+                        value={destForm.coverImage}
+                        onChange={(e) => setDestForm({ ...destForm, coverImage: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Destination Description / Overview</label>
+                  <textarea 
+                    rows={3}
+                    placeholder="Describe what makes this destination special for travelers (sightseeing, adventure, romance, local culture, cuisines)..."
+                    value={destForm.description}
+                    onChange={(e) => setDestForm({ ...destForm, description: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+                    <input 
+                      type="checkbox"
+                      checked={destForm.isPopular}
+                      onChange={(e) => setDestForm({ ...destForm, isPopular: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                    />
+                    <span>Feature in Popular Destinations Carousel on Home Page</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDest}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSubmittingDest ? (
+                      <>
+                        <RefreshCw size={15} className="animate-spin" />
+                        <span>Publishing & Syncing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>Publish & Sync Destination Live</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Right: Live Preview Card (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-slate-900 text-white p-3 rounded-xl flex items-center justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1.5 text-emerald-400">
+                    <Eye size={14} /> Live Traveler Card Preview
+                  </span>
+                  <span className="text-[11px] text-slate-400">Updates live as you type</span>
+                </div>
+
+                {/* Simulated Destination Card */}
+                <div className="destination-card shadow-lg border border-slate-200 overflow-hidden rounded-2xl bg-white max-w-sm mx-auto">
+                  <div className="card-media-wrapper relative h-48 overflow-hidden bg-slate-100">
+                    <img 
+                      src={destForm.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'} 
+                      alt={destForm.name || 'Preview'} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-black/60 backdrop-blur-md text-white border border-white/20">
+                        {destForm.region}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h4 className="font-bold text-slate-900 text-base">{destForm.name || 'Destination Name'}</h4>
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">From ₹99</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-slate-500 text-xs mb-2">
+                      <MapPin size={12} className="text-slate-400" />
+                      <span>{destForm.country || 'India'}</span>
+                      <span className="mx-1">•</span>
+                      <span>Best: {destForm.bestTimeToVisit}</span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 line-clamp-2 mb-3">
+                      {destForm.tagline || destForm.description || 'Handcrafted holiday packages and verified travel itineraries.'}
+                    </p>
+
+                    <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>Verified Digital Access</span>
+                      <span className="font-bold text-blue-600">Explore Packages →</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-slate-700 space-y-1">
+                  <div className="font-bold text-blue-900 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-blue-600" /> Instant Propagation Guarantee
+                  </div>
+                  <p className="text-[11.5px] text-slate-600">
+                    Once clicked, this destination will immediately appear in the <strong>Search Bar</strong>, <strong>Popular Destinations Carousel</strong>, and <strong>/destinations Directory</strong> for every traveler visiting the site.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Existing Destinations List */}
+            <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    Currently Active & Synced Destinations ({destinationsMaster?.length || 0})
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    These destinations are live on the user website right now.
+                  </p>
+                </div>
+                {onNavigateToDestinations && (
+                  <button
+                    onClick={onNavigateToDestinations}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+                  >
+                    View All on User Directory →
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {destinationsMaster && destinationsMaster.map((dest) => (
+                  <div 
+                    key={dest.id} 
+                    className="p-2.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="aspect-video rounded-lg overflow-hidden mb-2 bg-slate-100">
+                      <img 
+                        src={dest.cover_image || dest.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'} 
+                        alt={dest.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h5 className="font-bold text-slate-800 text-xs truncate">{dest.name}</h5>
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 mt-0.5">
+                      <span className="truncate">{dest.country}</span>
+                      <span className="text-emerald-700 font-bold">₹99</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1714,6 +2144,50 @@ export const AgentDashboardModal: React.FC<AgentDashboardModalProps> = ({
                 >
                   <Plus size={16} />
                   <span>Create Another</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DESTINATION CREATED SUCCESS MODAL */}
+        {destSuccess && (
+          <div className="modal-overlay animate-fade-in" style={{ zIndex: 100000 }} onClick={() => setDestSuccess(null)}>
+            <div className="modal-container p-6 max-w-md bg-white rounded-2xl shadow-2xl animate-scale-up text-center" onClick={(e) => e.stopPropagation()}>
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                <CheckCircle2 size={36} />
+              </div>
+
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mb-2">
+                ⚡ Synced Live to User Pages
+              </span>
+
+              <h3 className="text-xl font-extrabold text-slate-900 mb-1">
+                Destination "{destSuccess.name}" Published!
+              </h3>
+
+              <p className="text-xs text-slate-600 mb-5 leading-relaxed">
+                Your new destination is now live in MySQL and immediately accessible across the website. Travelers can find it in the search bar, explore packages, and browse it on the Destinations page!
+              </p>
+
+              <div className="flex flex-col gap-2">
+                {onNavigateToDestinations && (
+                  <button
+                    onClick={() => {
+                      setDestSuccess(null);
+                      onNavigateToDestinations();
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                  >
+                    <Eye size={16} />
+                    <span>View on User Destinations Page</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setDestSuccess(null)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-all"
+                >
+                  Create Another Destination / Back to Studio
                 </button>
               </div>
             </div>

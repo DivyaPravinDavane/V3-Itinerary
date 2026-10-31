@@ -3,10 +3,12 @@ import {
   ArrowLeft, Clock, Users, Heart, Star,
   ShieldCheck, Download, CheckCircle2,
   Calendar, CreditCard, ChevronDown, ChevronUp, FileText,
-  MapPin, Phone, MessageCircle, Mail, IndianRupee, Hotel, Sparkles, Share2
+  MapPin, Phone, MessageCircle, Mail, Hotel, Sparkles, Share2
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
 import { generateItineraryPDF } from '../utils/pdfGenerator';
+import { ItineraryReviewsSection } from './ItineraryReviewsSection';
+import { getEffectiveRatingAndCount } from '../utils/reviewManager';
 
 interface ItineraryDetailPageProps {
   itinerary: Itinerary;
@@ -36,12 +38,14 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
   const [showFullSchedule, setShowFullSchedule] = useState(true);
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
   const [copied, setCopied] = useState(false);
+  const [liveRating, setLiveRating] = useState(() => getEffectiveRatingAndCount(itinerary));
 
   const hasPurchased = Boolean(isPurchased || order);
 
-  // Scroll to top on mount
+  // Scroll to top on mount & update rating stats
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setLiveRating(getEffectiveRatingAndCount(itinerary));
   }, [itinerary.id]);
 
   const handleDownloadPDF = () => {
@@ -161,11 +165,16 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                 <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
                   {itinerary.destination} Verified Travel Itinerary
                 </span>
-                <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                <button 
+                  type="button"
+                  onClick={() => document.getElementById('itinerary-reviews-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="flex items-center gap-1.5 text-xs text-slate-600 bg-amber-50 hover:bg-amber-100/80 px-2.5 py-1 rounded-md border border-amber-200 transition-colors cursor-pointer"
+                  title="Click to view traveler reviews and write your review"
+                >
                   <Star size={14} fill="#F59E0B" stroke="#F59E0B" />
-                  <span className="font-bold text-slate-900">{itinerary.rating}</span>
-                  <span>({itinerary.reviewCount} verified travelers)</span>
-                </div>
+                  <span className="font-bold text-slate-900">{liveRating.rating.toFixed(1)}</span>
+                  <span>({liveRating.reviewCount} verified travelers • Read Reviews)</span>
+                </button>
               </div>
 
               <h1 className="itinerary-page-main-title">{itinerary.title}</h1>
@@ -279,7 +288,6 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                     <div key={i} className="hotel-tier-box">
                       <span className={`hotel-tier-tag ${h.tier.toLowerCase()}`}>{h.tier} Tier</span>
                       <h4 className="hotel-name">{h.name}</h4>
-                      <div className="hotel-price">{h.estPricePerNight} / night</div>
                       <div className="hotel-perks-list">
                         {h.perks.map((p, pi) => (
                           <span key={pi} className="hotel-perk-item">✓ {p}</span>
@@ -291,37 +299,7 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
               </div>
             )}
 
-            {/* Estimated Budget Breakdown */}
-            {itinerary.budgetBreakdown && (
-              <div className="itinerary-content-card shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <IndianRupee size={18} className="text-emerald-600" />
-                  <h3 className="text-lg font-bold text-slate-900">Estimated Trip Budget Breakdown</h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-                  <div className="budget-cell">
-                    <span className="lbl">Flights</span>
-                    <span className="val">₹{itinerary.budgetBreakdown.flights?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="budget-cell">
-                    <span className="lbl">Hotel Stays</span>
-                    <span className="val">₹{itinerary.budgetBreakdown.accommodation?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="budget-cell">
-                    <span className="lbl">Food & Dining</span>
-                    <span className="val">₹{itinerary.budgetBreakdown.foodDining?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="budget-cell">
-                    <span className="lbl">Sightseeing</span>
-                    <span className="val">₹{itinerary.budgetBreakdown.activitiesSightseeing?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="budget-cell">
-                    <span className="lbl">Local Transit</span>
-                    <span className="val">₹{itinerary.budgetBreakdown.localTransport?.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {/* Verified Agent Card */}
             {itinerary.agent && (
@@ -395,6 +373,16 @@ export const ItineraryDetailPage: React.FC<ItineraryDetailPageProps> = ({
                   ))}
                 </ul>
               </div>
+            </div>
+
+            {/* Traveler Reviews & Ratings Section */}
+            <div id="itinerary-reviews-section">
+              <ItineraryReviewsSection 
+                itinerary={itinerary} 
+                onRatingUpdated={(newRating, newCount) => {
+                  setLiveRating({ rating: newRating, reviewCount: newCount });
+                }} 
+              />
             </div>
           </div>
 

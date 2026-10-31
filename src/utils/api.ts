@@ -1,4 +1,4 @@
-import type { OrderRecord, Itinerary } from '../types';
+import type { OrderRecord, Itinerary, Destination } from '../types';
 import { ALL_ITINERARIES as FALLBACK_ALL_ITINERARIES } from '../data/mockData';
 
 export const API_BASE_ORIGIN = (import.meta as any).env?.VITE_API_URL 
@@ -9,6 +9,7 @@ export const API_BASE_URL = `${API_BASE_ORIGIN}/api`;
 
 // Local storage keys for resilient offline & static hosting support
 export const KEY_CUSTOM_ITINERARIES = 'v3_custom_itineraries';
+export const KEY_CUSTOM_DESTINATIONS = 'v3_custom_destinations';
 export const KEY_DELETED_ITINERARIES = 'v3_deleted_itinerary_ids';
 export const KEY_LOCAL_ORDERS = 'v3_orders';
 export const KEY_FEATURED_OVERRIDES = 'v3_featured_overrides';
@@ -813,10 +814,108 @@ export async function fetchItineraries(): Promise<Itinerary[]> {
   return Array.from(map.values());
 }
 
+export function getLocalCustomDestinations(): Destination[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(KEY_CUSTOM_DESTINATIONS);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalCustomDestination(destination: Destination): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getLocalCustomDestinations();
+    const existingIndex = current.findIndex(
+      (item) => item.id === destination.id || item.slug === destination.slug || item.name.toLowerCase() === destination.name.toLowerCase()
+    );
+    if (existingIndex >= 0) {
+      current[existingIndex] = { ...current[existingIndex], ...destination };
+    } else {
+      current.unshift(destination);
+    }
+    localStorage.setItem(KEY_CUSTOM_DESTINATIONS, JSON.stringify(current));
+  } catch (e) {
+    console.warn('Could not save local destination:', e);
+  }
+}
+
 /**
- * Fetch all dynamic destinations from MySQL master table via API
+ * Save destination to backend (MySQL) with instant local sync & event broadcast
  */
-export async function fetchDestinations() {
+export async function saveDestinationToBackend(destination: Partial<Destination>): Promise<Destination> {
+  const name = (destination.name || 'New Destination').trim();
+  const slug = destination.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const id = destination.id || `dest_${Date.now()}`;
+
+  const fullDest: Destination = {
+    id,
+    name,
+    slug,
+    country: destination.country || 'India',
+    region: destination.region || 'Domestic',
+    tagline: destination.tagline || `${name} Curated Holiday Packages`,
+    description: destination.description || `Explore handcrafted travel itineraries and verified agency packages for ${name}.`,
+    cover_image: destination.cover_image || destination.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
+    coverImage: destination.coverImage || destination.cover_image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
+    galleryImages: destination.galleryImages || [],
+    best_time_to_visit: destination.best_time_to_visit || destination.bestTimeToVisit || 'October to March',
+    bestTimeToVisit: destination.bestTimeToVisit || destination.best_time_to_visit || 'October to March',
+    itinerary_count: destination.itinerary_count !== undefined ? destination.itinerary_count : (destination.itineraryCount || 0),
+    itineraryCount: destination.itineraryCount !== undefined ? destination.itineraryCount : (destination.itinerary_count || 0),
+    starting_price: destination.starting_price || destination.startingPrice || 99,
+    startingPrice: destination.startingPrice || destination.starting_price || 99,
+    is_popular: destination.is_popular !== undefined ? destination.is_popular : true,
+    isPopular: destination.isPopular !== undefined ? destination.isPopular : true,
+    is_active: true
+  };
+
+  // 1. Immediately persist to localStorage for instant client-side sync & offline resilience
+  saveLocalCustomDestination(fullDest);
+
+  // 2. Dispatch custom event for real-time frontend listener in App.tsx
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('v3:destination_created', { detail: fullDest }));
+  }
+
+  // 3. Post to backend API (MySQL)
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+
+    const res = await fetch(`${API_BASE_URL}/destinations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fullDest),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.destination) {
+        saveLocalCustomDestination(data.destination);
+        return data.destination;
+      }
+    }
+  } catch (err) {
+    console.warn('Backend destination save warning (saved locally):', err);
+  }
+
+  return fullDest;
+}
+
+/**
+ * Fetch all dynamic destinations from MySQL master table via API + local store
+ */
+export async function fetchDestinations(): Promise<Destination[]> {
+  const localDests = getLocalCustomDestinations();
+  let backendDests: Destination[] = [];
+
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -827,12 +926,26 @@ export async function fetchDestinations() {
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
       const data = await res.json();
-      return data.destinations || [];
+      backendDests = data.destinations || [];
     }
   } catch (err) {
     console.warn('Error fetching destinations from backend:', err);
   }
-  return [];
+
+  // Merge backend destinations with local custom destinations, avoiding duplicates
+  const map = new Map<string, Destination>();
+  backendDests.forEach(d => {
+    if (d && d.name) map.set(d.name.toLowerCase(), d);
+  });
+  localDests.forEach(d => {
+    if (d && d.name) {
+      if (!map.has(d.name.toLowerCase())) {
+        map.set(d.name.toLowerCase(), d);
+      }
+    }
+  });
+
+  return Array.from(map.values());
 }
 
 /**

@@ -124,7 +124,7 @@ export const DestinationTripsModal: React.FC<DestinationTripsModalProps> = ({
                         <span className="text-xs text-slate-500">({trip.reviewCount} reviews)</span>
                       </div>
                       <span className="trip-ground-est">
-                        Est. Budget: <strong>₹{trip.estimatedTripCost.toLocaleString('en-IN')}</strong>
+                        Access Fee: <strong>₹99 Flat</strong>
                       </span>
                     </div>
 

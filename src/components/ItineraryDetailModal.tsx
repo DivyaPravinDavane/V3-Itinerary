@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, Clock, Users, Heart, Star, Lock,
   ShieldCheck, Download,
@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import type { Itinerary, OrderRecord } from '../types';
 import { generateItineraryPDF } from '../utils/pdfGenerator';
+import { ItineraryReviewsSection } from './ItineraryReviewsSection';
+import { getEffectiveRatingAndCount } from '../utils/reviewManager';
 
 interface ItineraryDetailModalProps {
   itinerary: Itinerary | null;
@@ -33,6 +35,15 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
 }) => {
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [openDayIndex, setOpenDayIndex] = useState<number | null>(0);
+  const [activeModalTab, setActiveModalTab] = useState<'overview' | 'reviews'>('overview');
+  const [liveRating, setLiveRating] = useState(() => itinerary ? getEffectiveRatingAndCount(itinerary) : { rating: 4.8, reviewCount: 95 });
+
+  useEffect(() => {
+    if (itinerary) {
+      setLiveRating(getEffectiveRatingAndCount(itinerary));
+      setActiveModalTab('overview');
+    }
+  }, [itinerary?.id]);
 
   if (!itinerary) return null;
 
@@ -121,12 +132,18 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
 
             {/* Gallery Previews & Highlights */}
             <div className="split-left-details">
-              <div className="pic-rating-row">
-                <div className="rating-pill">
+              <div 
+                className="pic-rating-row cursor-pointer group"
+                onClick={() => setActiveModalTab('reviews')}
+                title="Click to view traveler reviews and submit a review"
+              >
+                <div className="rating-pill group-hover:scale-105 transition-transform">
                   <Star size={14} fill="#F59E0B" stroke="#F59E0B" />
-                  <span className="font-bold">{itinerary.rating}</span>
+                  <span className="font-bold">{liveRating.rating.toFixed(1)}</span>
                 </div>
-                <span className="text-xs text-slate-500">({itinerary.reviewCount} verified travelers)</span>
+                <span className="text-xs text-slate-500 group-hover:text-emerald-700 transition-colors">
+                  ({liveRating.reviewCount} verified reviews • View)
+                </span>
               </div>
 
               <div className="pic-highlights-box">
@@ -155,10 +172,50 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
             <div className="content-header-block">
               <span className="content-dest-tag">{itinerary.destination} Verified Itinerary</span>
               <h2 className="content-package-title">{itinerary.title}</h2>
+
+              {/* View Selector Tabs */}
+              <div className="flex items-center gap-2 mt-3 p-1 rounded-xl bg-slate-100 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('overview')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    activeModalTab === 'overview'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText size={13} />
+                  <span>Overview & Access</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('reviews')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    activeModalTab === 'reviews'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Star size={13} className="text-amber-500 fill-amber-500" />
+                  <span>Traveler Reviews ({liveRating.reviewCount})</span>
+                </button>
+              </div>
             </div>
 
-            {/* Little Summary (Not Full) as requested */}
-            <div className="package-little-summary-card">
+            {activeModalTab === 'reviews' ? (
+              <div className="modal-reviews-tab-content animate-fade-in my-1">
+                <ItineraryReviewsSection 
+                  itinerary={itinerary}
+                  compact
+                  onRatingUpdated={(newRating, newCount) => {
+                    setLiveRating({ rating: newRating, reviewCount: newCount });
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Little Summary (Not Full) as requested */}
+                <div className="package-little-summary-card">
               <h4 className="summary-title">Package Synopsis</h4>
               <p className="summary-text">
                 {itinerary.overview}
@@ -175,13 +232,13 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                 ))}
               </div>
 
-              {/* Estimated Budget Synopsis */}
+              {/* Access Fee Synopsis (Tour rate hidden, ₹99 flat access fee only) */}
               <div className="summary-budget-row">
                 <div>
-                  <span className="budget-lbl">Est. Total Trip Ground Budget:</span>
-                  <div className="budget-val">₹{itinerary.estimatedTripCost.toLocaleString('en-IN')}</div>
+                  <span className="budget-lbl">Digital Blueprint Access:</span>
+                  <span className="text-xs font-semibold text-slate-700">Verified Day-by-Day Itinerary</span>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <span className="budget-lbl">Itinerary Access Fee:</span>
                   <div className="price-val">₹99 <span className="text-xs font-normal text-slate-500">(Flat)</span></div>
                 </div>
@@ -319,6 +376,8 @@ export const ItineraryDetailModal: React.FC<ItineraryDetailModalProps> = ({
                     )}
                   </div>
                 </div>
+            )}
+              </>
             )}
           </div>
         </div>

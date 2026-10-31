@@ -135,13 +135,25 @@ export function App() {
     const handleSync = () => {
       loadData();
     };
+    const handleReviewAdded = (e: any) => {
+      const { itineraryId, newRating, newReviewCount } = e.detail || {};
+      if (itineraryId) {
+        setAllItineraries(prev => prev.map(it => it.id === itineraryId ? { ...it, rating: newRating, reviewCount: newReviewCount } : it));
+        setPopularDestinations(prev => prev.map(it => it.id === itineraryId ? { ...it, rating: newRating, reviewCount: newReviewCount } : it));
+        setFilteredDestinations(prev => prev.map(it => it.id === itineraryId ? { ...it, rating: newRating, reviewCount: newReviewCount } : it));
+      }
+    };
     window.addEventListener('v3:itinerary_created', handleSync);
     window.addEventListener('v3:itinerary_updated', handleSync);
     window.addEventListener('v3:itinerary_deleted', handleSync);
+    window.addEventListener('v3:destination_created', handleSync);
+    window.addEventListener('v3:review_added', handleReviewAdded);
     return () => {
       window.removeEventListener('v3:itinerary_created', handleSync);
       window.removeEventListener('v3:itinerary_updated', handleSync);
       window.removeEventListener('v3:itinerary_deleted', handleSync);
+      window.removeEventListener('v3:destination_created', handleSync);
+      window.removeEventListener('v3:review_added', handleReviewAdded);
     };
   }, []);
 
@@ -899,11 +911,13 @@ export function App() {
             isPage={true}
             user={user}
             allItineraries={allItineraries}
+            destinationsMaster={destinationsMaster}
             onBackToHome={() => handleNavigatePage('home')}
             onClose={() => handleNavigatePage('home')}
             onSelectItinerary={(it) => setSelectedItinerary(it)}
             onDataRefresh={loadData}
             onOpenAgentOnboarding={() => setAgentModalOpen(true)}
+            onNavigateToDestinations={() => handleNavigatePage('destinations')}
           />
 
           {/* Footer */}
