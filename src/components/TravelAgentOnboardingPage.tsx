@@ -259,15 +259,6 @@ export const TravelAgentOnboardingPage: React.FC<TravelAgentOnboardingPageProps>
         {/* Top Header Bar / Navigation Integration */}
         <div className="agent-onboarding-topbar">
           <div className="flex items-center gap-3">
-            <div 
-              className="agent-brand-pill cursor-pointer" 
-              onClick={onNavigateHome || onClose}
-              title="Return to V3 Itinerary Marketplace"
-            >
-              <span className="text-orange-500 font-extrabold text-lg">V3</span>
-              <span className="text-primary-navy font-bold text-sm">itinerary</span>
-              <span className="agent-tag-badge">Partner Portal</span>
-            </div>
             {onOpenLogin && (
               <button
                 type="button"
